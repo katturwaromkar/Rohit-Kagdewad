@@ -1,0 +1,227 @@
+import { test, describe } from "node:test";
+import assert from "node:assert/strict";
+import Decimal from "decimal.js";
+
+import { calculateFlatInterestSchedule } from "../lib/financial/flat-interest";
+import { calculateReducingBalanceSchedule } from "../lib/financial/reducing-balance";
+import { allocatePayment } from "../lib/financial/allocator";
+import { calculateReversalRollback } from "../lib/financial/reversal";
+import { generateLoanSchedule } from "../lib/financial/index";
+
+describe("Financial Calculation Engine Comprehensive Test Suite", () => {
+  test("Flat Rate Interest: ₹50,000 at 24% p.a. for 5 months", () => {
+    const result = calculateFlatInterestSchedule({
+      principalAmount: "50000.00",
+      interestRate: "24.00", // 24% p.a. (2% per month)
+      interestType: "FLAT_RATE",
+      repaymentFrequency: "MONTHLY",
+      tenurePeriods: 5,
+      disbursementDate: "2026-09-01",
+      firstDueDate: "2026-10-01",
+      processingFee: "500.00",
+    });
+
+    assert.equal(result.principalAmount, "50000.00");
+    assert.equal(result.totalInterestExpected, "5000.00");
+    assert.equal(result.totalAmountExpected, "55000.00");
+    assert.equal(result.installments.length, 5);
+
+    let sumPrincipal = new Decimal(0);
+    let sumInterest = new Decimal(0);
+    for (const inst of result.installments) {
+      sumPrincipal = sumPrincipal.plus(new Decimal(inst.principalDue));
+      sumInterest = sumInterest.plus(new Decimal(inst.interestDue));
+      assert.equal(inst.totalDue, new Decimal(inst.principalDue).plus(new Decimal(inst.interestDue)).toFixed(2));
+    }
+
+    assert.equal(sumPrincipal.toFixed(2), "50000.00");
+    assert.equal(sumInterest.toFixed(2), "5000.00");
+    assert.equal(result.installments[4].remainingPrincipal, "0.00");
+  });
+
+  test("Flat Rate Weekly: ₹20,000 at 20% p.a. for 10 weeks", () => {
+    const result = generateLoanSchedule({
+      principalAmount: "20000.00",
+      interestRate: "20.00",
+      interestType: "FLAT_RATE",
+      repaymentFrequency: "WEEKLY",
+      tenurePeriods: 10,
+      disbursementDate: "2026-09-01",
+      firstDueDate: "2026-09-08",
+    });
+
+    assert.equal(result.installments.length, 10);
+    // 20000 * 0.20 * (10/52) = 769.23
+    assert.equal(result.totalInterestExpected, "769.23");
+    assert.equal(result.totalAmountExpected, "20769.23");
+
+    let sumPrincipal = new Decimal(0);
+    for (const inst of result.installments) {
+      sumPrincipal = sumPrincipal.plus(new Decimal(inst.principalDue));
+    }
+    assert.equal(sumPrincipal.toFixed(2), "20000.00");
+  });
+
+  test("Reducing Balance (EMI): ₹100,000 at 18% p.a. for 6 months", () => {
+    const result = calculateReducingBalanceSchedule({
+      principalAmount: "100000.00",
+      interestRate: "18.00",
+      interestType: "REDUCING_BALANCE",
+      repaymentFrequency: "MONTHLY",
+      tenurePeriods: 6,
+      disbursementDate: "2026-09-01",
+      firstDueDate: "2026-10-01",
+    });
+
+    assert.equal(result.principalAmount, "100000.00");
+    assert.equal(result.installments.length, 6);
+
+    let sumPrincipal = new Decimal(0);
+    let sumInterest = new Decimal(0);
+    for (const inst of result.installments) {
+      sumPrincipal = sumPrincipal.plus(new Decimal(inst.principalDue));
+      sumInterest = sumInterest.plus(new Decimal(inst.interestDue));
+    }
+
+    assert.equal(sumPrincipal.toFixed(2), "100000.00");
+    assert.equal(sumInterest.toFixed(2), result.totalInterestExpected);
+    assert.equal(result.installments[5].remainingPrincipal, "0.00");
+  });
+
+  test("Daily Repayment: ₹10,000 flat for 30 days", () => {
+    const result = generateLoanSchedule({
+      principalAmount: "10000.00",
+      interestRate: "36.50", // 36.5% p.a. = 0.1% per day
+      interestType: "FLAT_RATE",
+      repaymentFrequency: "DAILY",
+      tenurePeriods: 30,
+      disbursementDate: "2026-09-01",
+      firstDueDate: "2026-09-02",
+    });
+
+    assert.equal(result.installments.length, 30);
+    // 10000 * 0.365 * (30/365) = 300.00
+    assert.equal(result.totalInterestExpected, "300.00");
+    assert.equal(result.totalAmountExpected, "10300.00");
+  });
+
+  test("Payment Allocation: Partial payment covering fee, interest and part principal of installment 1", () => {
+    const installments = [
+      {
+        id: "inst-1",
+        installmentNumber: 1,
+        dueDate: "2026-09-01",
+        principalDue: "10000.00",
+        interestDue: "1000.00",
+        feeDue: "200.00",
+        totalDue: "11200.00",
+        principalPaid: "0.00",
+        interestPaid: "0.00",
+        feePaid: "0.00",
+        totalPaid: "0.00",
+        status: "OVERDUE",
+      },
+      {
+        id: "inst-2",
+        installmentNumber: 2,
+        dueDate: "2026-10-01",
+        principalDue: "10000.00",
+        interestDue: "1000.00",
+        feeDue: "0.00",
+        totalDue: "11000.00",
+        principalPaid: "0.00",
+        interestPaid: "0.00",
+        feePaid: "0.00",
+        totalPaid: "0.00",
+        status: "UPCOMING",
+      },
+    ];
+
+    const allocResult = allocatePayment("5000.00", installments, new Date("2026-09-15"));
+
+    assert.equal(allocResult.totalPaid, "5000.00");
+    assert.equal(allocResult.totalFeeAllocated, "200.00");
+    assert.equal(allocResult.totalInterestAllocated, "1000.00");
+    assert.equal(allocResult.totalPrincipalAllocated, "3800.00");
+    assert.equal(allocResult.unallocatedExcess, "0.00");
+    assert.equal(allocResult.allocations.length, 1);
+    assert.equal(allocResult.allocations[0].installmentId, "inst-1");
+    assert.equal(allocResult.allocations[0].newStatus, "PARTIAL");
+    assert.equal(allocResult.allocations[0].totalAllocated, "5000.00");
+  });
+
+  test("Payment Allocation: Multi-installment full payment with overflow", () => {
+    const installments = [
+      {
+        id: "inst-1",
+        installmentNumber: 1,
+        dueDate: "2026-08-01",
+        principalDue: "5000.00",
+        interestDue: "500.00",
+        feeDue: "0.00",
+        totalDue: "5500.00",
+        principalPaid: "0.00",
+        interestPaid: "0.00",
+        feePaid: "0.00",
+        totalPaid: "0.00",
+        status: "OVERDUE",
+      },
+      {
+        id: "inst-2",
+        installmentNumber: 2,
+        dueDate: "2026-09-01",
+        principalDue: "5000.00",
+        interestDue: "500.00",
+        feeDue: "0.00",
+        totalDue: "5500.00",
+        principalPaid: "0.00",
+        interestPaid: "0.00",
+        feePaid: "0.00",
+        totalPaid: "0.00",
+        status: "DUE_TODAY",
+      },
+    ];
+
+    const allocResult = allocatePayment("11000.00", installments, new Date("2026-09-01"));
+
+    assert.equal(allocResult.totalPaid, "11000.00");
+    assert.equal(allocResult.totalInterestAllocated, "1000.00");
+    assert.equal(allocResult.totalPrincipalAllocated, "10000.00");
+    assert.equal(allocResult.allocations.length, 2);
+    assert.equal(allocResult.allocations[0].newStatus, "PAID");
+    assert.equal(allocResult.allocations[1].newStatus, "PAID");
+  });
+
+  test("Payment Reversal: Complete rollback of allocations and restoration of overdue status", () => {
+    const allocations = [
+      {
+        installmentId: "inst-1",
+        installmentNumber: 1,
+        principalAmount: "3800.00",
+        interestAmount: "1000.00",
+        feeAmount: "200.00",
+      },
+    ];
+
+    const currentInstallments = [
+      {
+        id: "inst-1",
+        installmentNumber: 1,
+        dueDate: "2026-08-01",
+        totalDue: "11200.00",
+        principalPaid: "3800.00",
+        interestPaid: "1000.00",
+        feePaid: "200.00",
+        totalPaid: "5000.00",
+      },
+    ];
+
+    const reversalResults = calculateReversalRollback(allocations, currentInstallments, new Date("2026-09-08"));
+    assert.equal(reversalResults.length, 1);
+    assert.equal(reversalResults[0].newPrincipalPaid, "0.00");
+    assert.equal(reversalResults[0].newInterestPaid, "0.00");
+    assert.equal(reversalResults[0].newFeePaid, "0.00");
+    assert.equal(reversalResults[0].newTotalPaid, "0.00");
+    assert.equal(reversalResults[0].newStatus, "OVERDUE");
+  });
+});

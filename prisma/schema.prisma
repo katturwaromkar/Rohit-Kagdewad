@@ -1,0 +1,278 @@
+// Prisma Schema for Rohit Kagdewad Lending Management System
+// Compatible with both local SQLite for zero-setup execution and PostgreSQL for Supabase / Vercel production deployment.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 1. User & Staff Management
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  phone        String?   @unique
+  name         String
+  passwordHash String
+  role         String    @default("STAFF") // "OWNER" | "STAFF" | "COLLECTION_AGENT"
+  status       String    @default("ACTIVE") // "ACTIVE" | "INACTIVE" | "SUSPENDED"
+  permissions  String    @default("[]") // JSON string of permission keys
+  avatarUrl    String?
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  loansCreated     Loan[]     @relation("LoanCreator")
+  paymentsLogged   Payment[]  @relation("PaymentCollector")
+  paymentsReversed Payment[]  @relation("PaymentReverser")
+  auditLogs        AuditLog[] @relation("AuditUser")
+}
+
+// 2. Borrower Profile
+model Borrower {
+  id                String    @id @default(uuid())
+  borrowerCode      String    @unique // e.g. BOR-2026-001
+  fullName          String
+  phone             String    @unique // 10 digit Indian mobile
+  alternatePhone    String?
+  email             String?
+  dob               DateTime?
+  address           String
+  city              String    @default("Nanded")
+  state             String    @default("Maharashtra")
+  pincode           String?
+  occupation        String?
+  businessDetails   String?
+  monthlyIncome     Float?
+  
+  // Reference Person
+  referenceName     String?
+  referencePhone    String?
+  referenceRelation String?
+
+  // Guarantor Info
+  guarantorName     String?
+  guarantorPhone    String?
+  guarantorAddress  String?
+
+  status            String    @default("ACTIVE") // "ACTIVE" | "INACTIVE" | "OVERDUE" | "BLACKLISTED"
+  notes             String?
+  avatarUrl         String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  documents         BorrowerDocument[]
+  loans             Loan[]
+  payments          Payment[]
+  ledgerEntries     LedgerEntry[]
+  messages          WhatsAppMessage[]
+}
+
+// 3. Borrower Documents & KYC
+model BorrowerDocument {
+  id          String    @id @default(uuid())
+  borrowerId  String
+  borrower    Borrower  @relation(fields: [borrowerId], references: [id], onDelete: Cascade)
+  docType     String    // "AADHAAR" | "PAN" | "VOTER_ID" | "PHOTO" | "AGREEMENT" | "COLLATERAL_DEED" | "OTHER"
+  title       String
+  fileName    String
+  fileUrl     String    // Stored securely or private signed URL
+  fileSize    Int?      // Size in bytes
+  mimeType    String?
+  isVerified  Boolean   @default(false)
+  uploadedAt  DateTime  @default(now())
+}
+
+// 4. Loan Master
+model Loan {
+  id                    String    @id @default(uuid())
+  loanCode              String    @unique // e.g. LN-2026-001
+  borrowerId            String
+  borrower              Borrower  @relation(fields: [borrowerId], references: [id], onDelete: Restrict)
+  
+  principalAmount       Float
+  interestRate          Float     // % per annum
+  interestType          String    @default("FLAT_RATE") // "FLAT_RATE" | "REDUCING_BALANCE"
+  repaymentFrequency    String    @default("MONTHLY") // "DAILY" | "WEEKLY" | "BI_WEEKLY" | "MONTHLY"
+  tenurePeriods         Int       // Number of installments (e.g. 5 months, 12 weeks)
+  
+  disbursementDate      DateTime
+  firstDueDate          DateTime
+  
+  processingFee         Float     @default(0.0)
+  lateFeeRatePerDay     Float     @default(0.0) // % per day or flat
+  gracePeriodDays       Int       @default(0)
+  
+  totalInterestExpected Float
+  totalAmountExpected   Float
+  
+  principalOutstanding  Float
+  interestOutstanding   Float
+  totalOutstanding      Float
+  
+  status                String    @default("ACTIVE") // "PENDING_DISBURSAL" | "ACTIVE" | "OVERDUE" | "PAID_OFF" | "RESTRUCTURED" | "CLOSED" | "DEFAULTED"
+  notes                 String?
+  collateralInfo        String?
+  
+  closedAt              DateTime?
+  closureRemarks        String?
+  
+  createdById           String
+  createdBy             User      @relation("LoanCreator", fields: [createdById], references: [id])
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  installments          Installment[]
+  payments              Payment[]
+  ledgerEntries         LedgerEntry[]
+  messages              WhatsAppMessage[]
+}
+
+// 5. Repayment Schedule / Installments
+model Installment {
+  id                 String    @id @default(uuid())
+  loanId             String
+  loan               Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  installmentNumber  Int
+  dueDate            DateTime
+  
+  principalDue       Float
+  interestDue        Float
+  feeDue             Float     @default(0.0)
+  totalDue           Float
+  
+  principalPaid      Float     @default(0.0)
+  interestPaid       Float     @default(0.0)
+  feePaid            Float     @default(0.0)
+  totalPaid          Float     @default(0.0)
+  
+  status             String    @default("UPCOMING") // "UPCOMING" | "DUE_TODAY" | "PARTIAL" | "PAID" | "OVERDUE" | "WAIVED"
+  paidAt             DateTime?
+  lastReminderSentAt DateTime?
+
+  paymentAllocations PaymentAllocation[]
+}
+
+// 6. Payments
+model Payment {
+  id                 String    @id @default(uuid())
+  receiptNumber      String    @unique // e.g. REC-202609-0001
+  loanId             String
+  loan               Loan      @relation(fields: [loanId], references: [id], onDelete: Restrict)
+  borrowerId         String
+  borrower           Borrower  @relation(fields: [borrowerId], references: [id], onDelete: Restrict)
+  
+  amount             Float
+  principalAllocated Float     @default(0.0)
+  interestAllocated  Float     @default(0.0)
+  lateFeeAllocated   Float     @default(0.0)
+  
+  paymentDate        DateTime
+  paymentMode        String    @default("CASH") // "CASH" | "UPI" | "BANK_TRANSFER" | "CHEQUE" | "OTHER"
+  referenceNumber    String?   // UPI transaction ID or cheque number
+  notes              String?
+  status             String    @default("SUCCESS") // "SUCCESS" | "REVERSED" | "FAILED"
+  
+  collectedById      String
+  collectedBy        User      @relation("PaymentCollector", fields: [collectedById], references: [id])
+  
+  reversedAt         DateTime?
+  reversedById       String?
+  reversedBy         User?     @relation("PaymentReverser", fields: [reversedById], references: [id])
+  reversalReason     String?
+  
+  idempotencyKey     String?   @unique
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  allocations        PaymentAllocation[]
+  ledgerEntries      LedgerEntry[]
+}
+
+// 7. Payment Allocations breakdown
+model PaymentAllocation {
+  id              String      @id @default(uuid())
+  paymentId       String
+  payment         Payment     @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  installmentId   String
+  installment     Installment @relation(fields: [installmentId], references: [id], onDelete: Restrict)
+  
+  principalAmount Float
+  interestAmount  Float
+  feeAmount       Float
+  totalAmount     Float
+  createdAt       DateTime    @default(now())
+}
+
+// 8. Borrower & Business Double-Entry Ledger
+model LedgerEntry {
+  id             String    @id @default(uuid())
+  borrowerId     String
+  borrower       Borrower  @relation(fields: [borrowerId], references: [id], onDelete: Restrict)
+  loanId         String?
+  loan           Loan?     @relation(fields: [loanId], references: [id], onDelete: Restrict)
+  paymentId      String?
+  payment        Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  
+  entryType      String    // "DISBURSEMENT" | "INTEREST_ACCRUAL" | "PAYMENT" | "PAYMENT_REVERSAL" | "PENALTY_FEE" | "FEE_WAIVER"
+  debit          Float     @default(0.0) // Money lent / fee charged
+  credit         Float     @default(0.0) // Money paid by borrower
+  runningBalance Float                   // Current total net outstanding
+  
+  description    String
+  referenceNo    String?
+  entryDate      DateTime
+  createdAt      DateTime  @default(now())
+}
+
+// 9. WhatsApp Cloud Messages & Notifications
+model WhatsAppMessage {
+  id                String    @id @default(uuid())
+  borrowerId        String
+  borrower          Borrower  @relation(fields: [borrowerId], references: [id], onDelete: Restrict)
+  loanId            String?
+  loan              Loan?     @relation(fields: [loanId], references: [id], onDelete: SetNull)
+  
+  recipientPhone    String
+  templateName      String
+  messageBody       String
+  
+  status            String    @default("QUEUED") // "QUEUED" | "SENT" | "DELIVERED" | "READ" | "FAILED"
+  providerMessageId String?
+  errorMessage      String?
+  
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  readAt            DateTime?
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+// 10. Immutable Audit Trail
+model AuditLog {
+  id         String    @id @default(uuid())
+  userId     String?
+  user       User?     @relation("AuditUser", fields: [userId], references: [id], onDelete: SetNull)
+  action     String    // "CREATE" | "UPDATE" | "DELETE" | "REVERSE" | "EXPORT" | "LOGIN" | "STATUS_CHANGE"
+  entityType String    // "USER" | "BORROWER" | "BORROWER_DOCUMENT" | "LOAN" | "INSTALLMENT" | "PAYMENT" | "LEDGER" | "SETTING"
+  entityId   String
+  oldValues  String?   // JSON string
+  newValues  String?   // JSON string
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+}
+
+// 11. System Configuration & Business Settings
+model BusinessSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+}
