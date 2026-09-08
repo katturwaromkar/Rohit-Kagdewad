@@ -12,14 +12,11 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { allocatePayment } from "@/lib/financial";
 import {
   Receipt,
-  Plus,
   Search,
   FileText,
   RotateCcw,
   AlertCircle,
   CheckCircle2,
-  Phone,
-  Filter,
 } from "lucide-react";
 
 interface PaymentItem {
@@ -170,13 +167,26 @@ function PaymentsContent() {
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setCollectionError("");
-    setIsCollecting(true);
 
-    if (!formData.borrowerId || !formData.loanId || !formData.amount) {
-      setCollectionError("Please fill all required fields.");
-      setIsCollecting(false);
+    if (!formData.borrowerId) {
+      setCollectionError("Please select a borrower (कर्जदार निवडा).");
       return;
     }
+    if (!formData.loanId) {
+      setCollectionError("Please select a loan account (कर्ज खाते निवडा).");
+      return;
+    }
+    const amt = parseFloat(formData.amount);
+    if (isNaN(amt) || amt <= 0) {
+      setCollectionError("Please enter a valid positive payment amount (रक्कम ० पेक्षा जास्त असावी).");
+      return;
+    }
+
+    if (formData.paymentMode !== "CASH" && !formData.referenceNumber.trim()) {
+      setCollectionError(`Reference / UTR number is recommended for ${formData.paymentMode} payments.`);
+    }
+
+    setIsCollecting(true);
 
     try {
       const res = await fetch("/api/payments", {
@@ -211,8 +221,8 @@ function PaymentsContent() {
   };
 
   const handleReversePayment = async () => {
-    if (!reversalTarget || !reversalReason.trim()) {
-      setReversalError("Please provide a reason for reversing this transaction.");
+    if (!reversalTarget || !reversalReason.trim() || reversalReason.trim().length < 5) {
+      setReversalError("Please provide a valid reason (min 5 characters) for reversing this transaction.");
       return;
     }
 
@@ -268,58 +278,58 @@ function PaymentsContent() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-slate-900">
-                Payment Collections & Receipts
+              <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
+                Payment Collections & Receipts (हप्ते जमा व पावत्या)
               </h1>
-              <span className="rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+              <span className="rounded-full bg-slate-800 border border-slate-700 px-2.5 py-0.5 text-xs font-semibold text-slate-300">
                 {payments.length} Transactions
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-400 mt-1">
               Log daily collections, inspect instant allocation hierarchy, and generate customer receipts.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 text-right">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 block">
-                Total Collected Today
+            <div className="rounded-xl bg-emerald-950/80 border border-emerald-800/80 px-4 py-2 text-right shadow-lg">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400 block">
+                Total Collected Today (आजची वसुली)
               </span>
-              <span className="text-sm font-bold text-emerald-800 font-mono">
+              <span className="text-base font-bold text-emerald-300 font-mono">
                 {formatCurrency(totalCollectedToday)}
               </span>
             </div>
           </div>
         </div>
 
-        <Card className="border-blue-200 bg-white shadow-xs">
-          <CardHeader className="py-3.5 bg-blue-50/40 border-b border-blue-100">
+        <Card className="border-slate-800 bg-slate-900 shadow-xl">
+          <CardHeader className="py-3.5 px-5 bg-slate-800/40 border-b border-slate-800">
             <div className="flex items-center gap-2">
-              <Receipt className="h-4 w-4 text-blue-600" />
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-800">
-                Record New Payment Collection
+              <Receipt className="h-4 w-4 text-blue-400" />
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-white">
+                Record New Payment Collection (नवीन हप्ता जमा करा)
               </CardTitle>
             </div>
           </CardHeader>
           <CardContent className="p-5">
             {collectionError && (
-              <div className="mb-4 rounded-md bg-red-50 border border-red-200 p-3 flex items-start gap-2.5 text-red-700 text-xs">
-                <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+              <div className="mb-4 rounded-xl bg-red-950/70 border border-red-800/80 p-3.5 flex items-start gap-2.5 text-red-300 text-xs shadow-lg animate-in fade-in">
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-400 mt-0.5" />
                 <span>{collectionError}</span>
               </div>
             )}
 
             <form onSubmit={handleRecordPayment} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Select Borrower <span className="text-red-500">*</span>
+                  <label className="block text-slate-300 font-medium mb-1.5">
+                    Select Borrower (कर्जदार) <span className="text-red-400">*</span>
                   </label>
                   <select
                     required
                     value={formData.borrowerId}
                     onChange={(e) => setFormData({ ...formData, borrowerId: e.target.value, loanId: "" })}
-                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600 font-medium"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
                   >
                     <option value="">-- Choose Borrower --</option>
                     {borrowers.map((b) => (
@@ -331,15 +341,15 @@ function PaymentsContent() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Select Loan <span className="text-red-500">*</span>
+                  <label className="block text-slate-300 font-medium mb-1.5">
+                    Select Loan (कर्ज खाते) <span className="text-red-400">*</span>
                   </label>
                   <select
                     required
                     value={formData.loanId}
                     onChange={(e) => setFormData({ ...formData, loanId: e.target.value })}
                     disabled={!formData.borrowerId || selectedBorrowerLoans.length === 0}
-                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600 font-medium disabled:bg-slate-100"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none disabled:opacity-50"
                   >
                     <option value="">-- Choose Loan --</option>
                     {selectedBorrowerLoans.map((l) => (
@@ -351,11 +361,11 @@ function PaymentsContent() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Collection Amount (₹) <span className="text-red-500">*</span>
+                  <label className="block text-slate-300 font-medium mb-1.5">
+                    Collection Amount (जमा रक्कम ₹) <span className="text-red-400">*</span>
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400 font-semibold">
                       ₹
                     </span>
                     <input
@@ -366,77 +376,77 @@ function PaymentsContent() {
                       placeholder="e.g. 11000"
                       value={formData.amount}
                       onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                      className="w-full rounded-md border border-slate-300 pl-7 pr-3 py-1.5 text-xs font-mono font-bold text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+                      className="w-full rounded-lg border border-slate-700 bg-slate-950 pl-8 pr-3.5 py-2.5 text-sm font-mono font-bold text-white focus:border-blue-500 focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Payment Mode <span className="text-red-500">*</span>
+                  <label className="block text-slate-300 font-medium mb-1.5">
+                    Payment Mode (भरणा प्रकार) <span className="text-red-400">*</span>
                   </label>
                   <select
                     value={formData.paymentMode}
                     onChange={(e: any) => setFormData({ ...formData, paymentMode: e.target.value })}
-                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600 font-medium"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
                   >
-                    <option value="CASH">Cash</option>
-                    <option value="UPI">UPI (Google Pay / PhonePe)</option>
-                    <option value="BANK_TRANSFER">Bank Transfer (NEFT / IMPS)</option>
-                    <option value="CHEQUE">Cheque</option>
-                    <option value="OTHER">Other</option>
+                    <option value="CASH">रोख (Cash)</option>
+                    <option value="UPI">युपीआय (UPI - GPay / PhonePe)</option>
+                    <option value="BANK_TRANSFER">बँक ट्रान्सफर (Bank Transfer / NEFT)</option>
+                    <option value="CHEQUE">धनादेश (Cheque)</option>
+                    <option value="OTHER">इतर (Other)</option>
                   </select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs pt-1">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Payment Date <span className="text-red-500">*</span>
+                  <label className="block text-slate-300 font-medium mb-1.5">
+                    Payment Date (तारीख) <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="date"
                     required
                     value={formData.paymentDate}
                     onChange={(e) => setFormData({ ...formData, paymentDate: e.target.value })}
-                    className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    UTR / Ref No. (Optional)
+                  <label className="block text-slate-300 font-medium mb-1.5">
+                    UTR / Ref No. (संदर्भ क्रमांक)
                   </label>
                   <input
                     type="text"
                     placeholder="e.g. UPI-423456789012 / Cheque #102931"
                     value={formData.referenceNumber}
                     onChange={(e) => setFormData({ ...formData, referenceNumber: e.target.value })}
-                    className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm font-mono text-white focus:border-blue-500 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Collection Remarks (Optional)
+                  <label className="block text-slate-300 font-medium mb-1.5">
+                    Remarks (नोंदी)
                   </label>
                   <input
                     type="text"
                     placeholder="e.g. Paid in office / Collected on site"
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
                   />
                 </div>
               </div>
 
               {allocationPreview && (
-                <div className="rounded-lg bg-slate-900 text-white p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="rounded-xl bg-slate-950 border border-slate-800 p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-400" />
                     <span className="font-semibold text-slate-200">Allocation Hierarchy:</span>
                   </div>
-                  <div className="flex items-center gap-4 font-mono">
+                  <div className="flex items-center gap-4 font-mono text-xs">
                     <span>
                       Late Fees: <strong className="text-amber-400">{formatCurrency(allocationPreview.totalFeeAllocated)}</strong>
                     </span>
@@ -457,9 +467,9 @@ function PaymentsContent() {
                   type="submit"
                   size="md"
                   isLoading={isCollecting}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[170px] shadow-sm font-semibold"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[190px] shadow-lg shadow-emerald-600/20 font-semibold h-10 px-6"
                 >
-                  Confirm & Print Receipt
+                  Confirm & Print Receipt (पावती)
                 </Button>
               </div>
             </form>
@@ -468,15 +478,15 @@ function PaymentsContent() {
 
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-slate-900">
-              Payment Transactions Register
+            <h2 className="text-sm font-semibold text-white">
+              Payment Transactions Register (जमा व्यवहार यादी)
             </h2>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-700 focus:outline-none"
+                className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-white focus:outline-none"
               >
                 <option value="ALL">All Statuses</option>
                 <option value="SUCCESS">Success Only</option>
@@ -486,7 +496,7 @@ function PaymentsContent() {
               <select
                 value={modeFilter}
                 onChange={(e) => setModeFilter(e.target.value)}
-                className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-700 focus:outline-none"
+                className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-white focus:outline-none"
               >
                 <option value="ALL">All Modes</option>
                 <option value="CASH">Cash</option>
@@ -502,16 +512,16 @@ function PaymentsContent() {
                   placeholder="Filter receipt, name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 bg-white py-1 pl-8 pr-2.5 text-xs focus:outline-none"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900 py-1.5 pl-8 pr-2.5 text-xs text-white focus:outline-none"
                 />
               </div>
             </div>
           </div>
 
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden bg-slate-900 border-slate-800 shadow-xl">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-600">
-                <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 uppercase tracking-wider text-[10px]">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
                   <tr>
                     <th className="px-4 py-3">Receipt No</th>
                     <th className="px-4 py-3">Date</th>
@@ -526,48 +536,48 @@ function PaymentsContent() {
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200">
+                <tbody className="divide-y divide-slate-800/80">
                   {filteredPayments.map((p) => {
                     const isReversed = p.status === "REVERSED";
                     return (
-                      <tr key={p.id} className={`hover:bg-slate-50/80 ${isReversed ? "bg-red-50/30 opacity-75" : ""}`}>
-                        <td className="px-4 py-3 font-mono font-semibold text-slate-900">
+                      <tr key={p.id} className={`hover:bg-slate-800/50 transition-colors ${isReversed ? "bg-red-950/20 opacity-75" : ""}`}>
+                        <td className="px-4 py-3 font-mono font-semibold text-white">
                           {p.receiptNumber}
                         </td>
-                        <td className="px-4 py-3 font-mono">{formatDate(p.paymentDate)}</td>
+                        <td className="px-4 py-3 font-mono text-slate-400">{formatDate(p.paymentDate)}</td>
                         <td className="px-4 py-3">
-                          <Link href={`/borrowers/${p.borrower.id}`} className="font-semibold text-slate-900 hover:text-blue-600">
+                          <Link href={`/borrowers/${p.borrower.id}`} className="font-semibold text-white hover:text-blue-400">
                             {p.borrower.fullName}
                           </Link>
                           <div className="text-[10px] font-mono text-slate-400">+91 {p.borrower.phone}</div>
                         </td>
-                        <td className="px-4 py-3 font-mono text-blue-600 font-medium">
+                        <td className="px-4 py-3 font-mono text-blue-400 font-medium">
                           <Link href={`/loans/${p.loan.id}`}>{p.loan.loanCode}</Link>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="font-medium text-slate-800">{p.paymentMode}</span>
+                          <span className="font-medium text-slate-200">{p.paymentMode}</span>
                           {p.referenceNumber && (
                             <span className="font-mono text-[10px] text-slate-400 block truncate max-w-[120px]">
                               {p.referenceNumber}
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right font-mono text-slate-700">
+                        <td className="px-4 py-3 text-right font-mono text-slate-300">
                           {formatCurrency(p.principalAllocated)}
                         </td>
-                        <td className="px-4 py-3 text-right font-mono text-slate-700">
+                        <td className="px-4 py-3 text-right font-mono text-slate-300">
                           {formatCurrency(p.interestAllocated)}
                         </td>
-                        <td className="px-4 py-3 text-right font-mono text-slate-700">
+                        <td className="px-4 py-3 text-right font-mono text-slate-300">
                           {formatCurrency(p.lateFeeAllocated)}
                         </td>
-                        <td className={`px-4 py-3 text-right font-mono font-bold ${isReversed ? "text-slate-400 line-through" : "text-emerald-700"}`}>
+                        <td className={`px-4 py-3 text-right font-mono font-bold ${isReversed ? "text-slate-500 line-through" : "text-emerald-400"}`}>
                           {formatCurrency(p.amount)}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <Badge status={p.status} />
                           {isReversed && p.reversalReason && (
-                            <span className="block text-[9px] text-red-600 mt-0.5 truncate max-w-[100px]" title={p.reversalReason}>
+                            <span className="block text-[9px] text-red-400 mt-0.5 truncate max-w-[100px]" title={p.reversalReason}>
                               {p.reversalReason}
                             </span>
                           )}
@@ -575,7 +585,7 @@ function PaymentsContent() {
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             <Link href={`/payments/${p.id}/receipt`}>
-                              <Button size="sm" variant="outline" className="h-7 px-2 text-[11px] gap-1">
+                              <Button size="sm" variant="outline" className="h-7 px-2 text-[11px] gap-1 border-slate-700 bg-slate-950 text-slate-300 hover:bg-slate-800">
                                 <FileText className="h-3 w-3" />
                                 <span>Receipt</span>
                               </Button>
@@ -587,7 +597,7 @@ function PaymentsContent() {
                                 variant="outline"
                                 onClick={() => setReversalTarget(p)}
                                 title="Reverse payment transaction (Owner only)"
-                                className="h-7 px-2 text-[11px] text-red-600 border-red-200 hover:bg-red-50"
+                                className="h-7 px-2 text-[11px] text-red-400 border-red-800/80 bg-red-950/40 hover:bg-red-900/60"
                               >
                                 <RotateCcw className="h-3 w-3" />
                               </Button>
@@ -617,26 +627,26 @@ function PaymentsContent() {
               setReversalTarget(null);
               setReversalError("");
             }}
-            title="Confirm Payment Reversal"
+            title="Confirm Payment Reversal (व्यवहार रद्द करणे)"
             description="Reversing this transaction will restore the installment balances, overdue status, and update borrower ledger."
           >
             <div className="space-y-4 text-xs">
-              <div className="rounded-lg bg-red-50 border border-red-200 p-3.5 space-y-1.5 text-red-900">
+              <div className="rounded-xl bg-red-950/80 border border-red-800/80 p-4 space-y-1.5 text-red-200">
                 <div className="font-semibold text-sm">Receipt: {reversalTarget.receiptNumber}</div>
                 <div>Borrower: {reversalTarget.borrower.fullName}</div>
-                <div>Amount: <span className="font-bold font-mono">{formatCurrency(reversalTarget.amount)}</span></div>
+                <div>Amount: <span className="font-bold font-mono text-white">{formatCurrency(reversalTarget.amount)}</span></div>
                 <div>Payment Date: {formatDate(reversalTarget.paymentDate)}</div>
               </div>
 
               {reversalError && (
-                <div className="rounded-md bg-red-100 p-2.5 text-red-800 text-xs">
+                <div className="rounded-lg bg-red-950 p-2.5 text-red-300 text-xs border border-red-800">
                   {reversalError}
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Mandatory Reversal Reason <span className="text-red-500">*</span>
+                <label className="block text-slate-300 font-medium mb-1.5">
+                  Mandatory Reversal Reason (रद्द करण्याचे कारण) <span className="text-red-400">*</span>
                 </label>
                 <textarea
                   rows={3}
@@ -644,7 +654,7 @@ function PaymentsContent() {
                   placeholder="State the audit reason for reversal (e.g. Incorrect amount entered / Cheque bounced / Duplicate entry)..."
                   value={reversalReason}
                   onChange={(e) => setReversalReason(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 p-2.5 text-xs focus:border-red-600 focus:outline-none focus:ring-1 focus:ring-red-600"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950 p-3 text-xs text-white focus:border-red-500 focus:outline-none"
                 />
               </div>
 
@@ -654,17 +664,18 @@ function PaymentsContent() {
                   variant="outline"
                   size="sm"
                   onClick={() => setReversalTarget(null)}
+                  className="border-slate-700 text-slate-300"
                 >
-                  Cancel
+                  Cancel (रद्द करा)
                 </Button>
                 <Button
                   type="button"
                   size="sm"
                   isLoading={isReversing}
                   onClick={handleReversePayment}
-                  className="bg-red-600 hover:bg-red-700 text-white"
+                  className="bg-red-600 hover:bg-red-700 text-white font-semibold"
                 >
-                  Confirm Reversal
+                  Confirm Reversal (खात्री करा)
                 </Button>
               </div>
             </div>
@@ -677,7 +688,7 @@ function PaymentsContent() {
 
 export default function PaymentsPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-slate-500 text-xs">Loading payments...</div>}>
+    <Suspense fallback={<div className="p-8 text-center text-slate-400 text-xs">Loading payments...</div>}>
       <PaymentsContent />
     </Suspense>
   );

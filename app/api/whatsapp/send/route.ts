@@ -13,22 +13,32 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { borrowerId, loanId, templateType, customMessage } = body;
+    const { borrowerId, loanId, templateType, customMessage, language = "both" } = body;
 
     const borrower = await prisma.borrower.findUnique({
       where: { id: borrowerId },
+      include: {
+        loans: {
+          where: { status: { in: ["ACTIVE", "OVERDUE"] } },
+          take: 1,
+        },
+      },
     });
 
     if (!borrower) {
       return NextResponse.json({ error: "Borrower not found" }, { status: 404 });
     }
 
-    let loan = null;
-    if (loanId) {
-      loan = await prisma.loan.findUnique({
-        where: { id: loanId },
-      });
-    }
+    const targetLoan = loanId
+      ? await prisma.loan.findUnique({ where: { id: loanId } })
+      : borrower.loans[0];
+
+    const businessPhoneSetting = await prisma.businessSetting.findUnique({
+      where: { key: "BUSINESS_PHONE" },
+    });
+    const businessNameSetting = await prisma.businessSetting.findUnique({
+      where: { key: "BUSINESS_NAME" },
+    });
 
     let messageBody = customMessage || "";
     let templateName = templateType || "CUSTOM_MESSAGE";
@@ -37,15 +47,18 @@ export async function POST(req: NextRequest) {
       const templateFn = (WHATSAPP_TEMPLATES as any)[templateType];
       messageBody = templateFn({
         borrowerName: borrower.fullName,
-        loanCode: loan?.loanCode || "",
-        amount: loan?.totalOutstanding || 0,
+        loanCode: targetLoan?.loanCode || "",
+        amount: targetLoan?.totalOutstanding || 0,
         dueDate: new Date(),
+        businessName: businessNameSetting?.value || "Rohit Kagdewad Lending Management",
+        businessPhone: businessPhoneSetting?.value || "+91 96652 69105",
+        language,
       });
     }
 
     const result = await sendWhatsAppMessage({
       borrowerId: borrower.id,
-      loanId: loan?.id,
+      loanId: targetLoan?.id,
       phone: borrower.phone,
       templateName,
       messageBody,
@@ -56,7 +69,7 @@ export async function POST(req: NextRequest) {
       action: "CREATE",
       entityType: "WHATSAPP_MESSAGE",
       entityId: result.id,
-      newValues: { recipient: borrower.fullName, template: templateName },
+      newValues: { recipient: borrower.fullName, template: templateName, language },
     });
 
     return NextResponse.json({ success: true, message: result });

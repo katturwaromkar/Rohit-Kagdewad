@@ -4,6 +4,9 @@ import { getSessionUser } from "@/lib/auth/session";
 import { paymentSchema } from "@/lib/validations";
 import { allocatePayment } from "@/lib/financial";
 import { logAudit } from "@/lib/audit/logger";
+import { sendWhatsAppMessage } from "@/lib/whatsapp/client";
+import { WHATSAPP_TEMPLATES } from "@/lib/whatsapp/templates";
+import { bilingualTemplates } from "@/lib/i18n/marathi";
 import { format } from "date-fns";
 
 export async function GET(req: NextRequest) {
@@ -257,6 +260,48 @@ export async function POST(req: NextRequest) {
 
       return payment;
     });
+
+    // 6. Send Automated Bilingual WhatsApp Receipt to Borrower
+    try {
+      const waMessage = WHATSAPP_TEMPLATES.PAYMENT_RECEIPT({
+        borrowerName: loan.borrower.fullName,
+        amount: totalPaymentAmt,
+        receiptNumber,
+        loanCode: loan.loanCode,
+        balanceRemaining: Math.max(0, loan.totalOutstanding - totalPaymentAmt),
+        language: "both",
+      });
+
+      await sendWhatsAppMessage({
+        borrowerId: loan.borrower.id,
+        loanId: loan.id,
+        phone: loan.borrower.phone,
+        templateName: "PAYMENT_RECEIPT",
+        messageBody: waMessage,
+      });
+    } catch (waErr) {
+      console.error("WhatsApp auto-receipt error (non-blocking):", waErr);
+    }
+
+    // 7. Instant Alert to Rohit Kagdewad (Owner)
+    try {
+      const ownerAlertText = bilingualTemplates.ownerCollectionAlert(
+        user.name,
+        loan.borrower.fullName,
+        totalPaymentAmt.toLocaleString("en-IN"),
+        data.paymentMode,
+        receiptNumber
+      );
+      await sendWhatsAppMessage({
+        borrowerId: loan.borrower.id,
+        loanId: loan.id,
+        phone: "9665269105",
+        templateName: "OWNER_ALERT",
+        messageBody: ownerAlertText,
+      });
+    } catch (ownerAlertErr) {
+      console.error("Owner alert error (non-blocking):", ownerAlertErr);
+    }
 
     // Audit log
     await logAudit({

@@ -1,4 +1,5 @@
 import { formatCurrency, formatDate } from "../utils";
+import { bilingualTemplates } from "../i18n/marathi";
 
 export interface TemplateParams {
   borrowerName: string;
@@ -9,24 +10,90 @@ export interface TemplateParams {
   businessName?: string;
   businessPhone?: string;
   daysOverdue?: number;
+  balanceRemaining?: string | number;
+  penaltyAmount?: string | number;
+  language?: "en" | "mr" | "both";
 }
 
 export const WHATSAPP_TEMPLATES = {
-  LOAN_DISBURSED: (p: TemplateParams) =>
-    `Hello ${p.borrowerName},\n\nYour loan (${p.loanCode}) of ${formatCurrency(p.amount)} has been successfully disbursed by ${p.businessName || "Rohit Kagdewad Lending"}.\n\nFirst Due Date: ${formatDate(p.dueDate)}\n\nThank you for choosing us.\nFor support: ${p.businessPhone || "+91 98765 43210"}`,
+  LOAN_DISBURSED: (p: TemplateParams) => {
+    return bilingualTemplates.disbursalWelcome(
+      {
+        borrowerName: p.borrowerName,
+        amount: typeof p.amount === "number" ? p.amount.toLocaleString("en-IN") : String(p.amount || "0"),
+        dueDate: p.dueDate ? formatDate(p.dueDate) : undefined,
+        loanCode: p.loanCode,
+        businessName: p.businessName || "Rohit Kagdewad Lending Management",
+        businessPhone: p.businessPhone || "+91 96652 69105",
+      },
+      p.language || "both"
+    );
+  },
 
-  DUE_IN_2_DAYS: (p: TemplateParams) =>
-    `Hello ${p.borrowerName},\n\nThis is a friendly reminder that your upcoming installment of ${formatCurrency(p.amount)} for Loan ${p.loanCode} is due on ${formatDate(p.dueDate)}.\n\nPlease keep the amount ready for payment.\n\nThank you,\n${p.businessName || "Rohit Kagdewad Lending"}`,
+  DUE_IN_2_DAYS: (p: TemplateParams) => {
+    return bilingualTemplates.dueReminder(
+      {
+        borrowerName: p.borrowerName,
+        amount: typeof p.amount === "number" ? p.amount.toLocaleString("en-IN") : String(p.amount || "0"),
+        dueDate: p.dueDate ? formatDate(p.dueDate) : undefined,
+        loanCode: p.loanCode,
+        businessName: p.businessName || "Rohit Kagdewad Lending Management",
+        businessPhone: p.businessPhone || "+91 96652 69105",
+      },
+      p.language || "both"
+    );
+  },
 
-  DUE_TODAY: (p: TemplateParams) =>
-    `Hello ${p.borrowerName},\n\nYour loan payment of ${formatCurrency(p.amount)} (Loan ID: ${p.loanCode}) is DUE TODAY (${formatDate(p.dueDate)}).\n\nPlease make the payment via UPI or Cash.\n\nThank you,\n${p.businessName || "Rohit Kagdewad Lending"} (${p.businessPhone || "+91 98765 43210"})`,
+  DUE_TODAY: (p: TemplateParams) => {
+    return bilingualTemplates.dueReminder(
+      {
+        borrowerName: p.borrowerName,
+        amount: typeof p.amount === "number" ? p.amount.toLocaleString("en-IN") : String(p.amount || "0"),
+        dueDate: p.dueDate ? formatDate(p.dueDate) : "आज (Today)",
+        loanCode: p.loanCode,
+        businessName: p.businessName || "Rohit Kagdewad Lending Management",
+        businessPhone: p.businessPhone || "+91 96652 69105",
+      },
+      p.language || "both"
+    );
+  },
 
-  OVERDUE_NOTICE: (p: TemplateParams) =>
-    `URGENT OVERDUE NOTICE\n\nDear ${p.borrowerName},\nYour payment of ${formatCurrency(p.amount)} for Loan ${p.loanCode} is ${p.daysOverdue || "now"} DAYS OVERDUE.\n\nPlease clear the pending amount immediately to avoid late fee penalties.\n\n${p.businessName || "Rohit Kagdewad Lending"} - ${p.businessPhone || "+91 98765 43210"}`,
+  OVERDUE_NOTICE: (p: TemplateParams) => {
+    return bilingualTemplates.overdueNotice(
+      {
+        borrowerName: p.borrowerName,
+        amount: typeof p.amount === "number" ? p.amount.toLocaleString("en-IN") : String(p.amount || "0"),
+        penaltyAmount: p.penaltyAmount ? String(p.penaltyAmount) : undefined,
+        loanCode: p.loanCode,
+        businessName: p.businessName || "Rohit Kagdewad Lending Management",
+        businessPhone: p.businessPhone || "+91 96652 69105",
+      },
+      p.language || "both"
+    );
+  },
 
-  PAYMENT_RECEIPT: (p: TemplateParams) =>
-    `Payment Confirmation - ${p.businessName || "Rohit Kagdewad Lending"}\n\nDear ${p.borrowerName},\nWe have received your payment of ${formatCurrency(p.amount)}.\nReceipt No: ${p.receiptNumber}\nDate: ${formatDate(new Date())}\n\nThank you for your payment!`,
+  PAYMENT_RECEIPT: (p: TemplateParams) => {
+    return bilingualTemplates.receipt(
+      {
+        borrowerName: p.borrowerName,
+        amount: typeof p.amount === "number" ? p.amount.toLocaleString("en-IN") : String(p.amount || "0"),
+        receiptNumber: p.receiptNumber,
+        loanCode: p.loanCode,
+        balanceRemaining: typeof p.balanceRemaining === "number" ? p.balanceRemaining.toLocaleString("en-IN") : String(p.balanceRemaining || "0.00"),
+        businessName: p.businessName || "Rohit Kagdewad Lending Management",
+        businessPhone: p.businessPhone || "+91 96652 69105",
+      },
+      p.language || "both"
+    );
+  },
 
-  LOAN_SETTLED: (p: TemplateParams) =>
-    `Loan Closure Confirmation\n\nDear ${p.borrowerName},\nCongratulations! Your loan ${p.loanCode} has been fully settled and closed with zero outstanding balance.\n\nThank you for your excellent relationship.\n${p.businessName || "Rohit Kagdewad Lending"}`,
+  LOAN_SETTLED: (p: TemplateParams) => {
+    const business = p.businessName || "Rohit Kagdewad Lending Management";
+    const phone = p.businessPhone || "+91 96652 69105";
+    return `*कर्ज खाते पूर्ण भरणा व बंद (Loan Settled)* 🎖️\n\n` +
+      `नमस्कार *${p.borrowerName}*,\n` +
+      `तुमचे *${p.loanCode || ""}* कर्ज खाते पूर्णपणे भरले असून शून्य बाकीसह बंद करण्यात आले आहे.\n\n` +
+      `आपल्या उत्तम सहकार्याबद्दल धन्यवाद!\n\n` +
+      `*${business}*\n📞 ${phone}`;
+  },
 };

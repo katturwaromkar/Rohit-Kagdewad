@@ -7,13 +7,11 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate, generateWhatsAppLink } from "@/lib/utils";
+import { bilingualTemplates } from "@/lib/i18n/marathi";
 import {
   ArrowLeft,
-  Printer,
   MessageSquare,
   Landmark,
-  CheckCircle2,
-  Share2,
 } from "lucide-react";
 import { PrintButton } from "./PrintButton";
 
@@ -50,23 +48,19 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
 
   const businessName = settingsMap["BUSINESS_NAME"] || "Rohit Kagdewad Lending Management";
   const ownerName = settingsMap["OWNER_NAME"] || "Rohit Kagdewad";
-  const businessPhone = settingsMap["BUSINESS_PHONE"] || "+91 98765 43210";
+  const businessPhone = settingsMap["BUSINESS_PHONE"] || "+91 96652 69105";
   const businessAddress = settingsMap["BUSINESS_ADDRESS"] || "Station Road, Nanded, Maharashtra - 431601";
 
-  // Formatted WhatsApp receipt text
-  const waReceiptText = `*Payment Receipt - ${businessName}*\n\n` +
-    `Receipt No: *${payment.receiptNumber}*\n` +
-    `Date: ${formatDate(payment.paymentDate)}\n` +
-    `Customer: ${payment.borrower.fullName}\n` +
-    `Loan ID: ${payment.loan.loanCode}\n\n` +
-    `Amount Paid: *${formatCurrency(payment.amount)}*\n` +
-    `• Principal: ${formatCurrency(payment.principalAllocated)}\n` +
-    `• Interest: ${formatCurrency(payment.interestAllocated)}\n` +
-    `• Late Fee: ${formatCurrency(payment.lateFeeAllocated)}\n\n` +
-    `Payment Mode: ${payment.paymentMode}${payment.referenceNumber ? ` (${payment.referenceNumber})` : ""}\n` +
-    `Remaining Loan Balance: *${formatCurrency(payment.loan.totalOutstanding)}*\n\n` +
-    `Thank you for your timely payment.\n` +
-    `${ownerName} | ${businessPhone}`;
+  // Formatted Bilingual WhatsApp receipt text
+  const waReceiptText = bilingualTemplates.receipt({
+    borrowerName: payment.borrower.fullName,
+    amount: payment.amount.toLocaleString("en-IN"),
+    receiptNumber: payment.receiptNumber,
+    loanCode: payment.loan.loanCode,
+    balanceRemaining: payment.loan.totalOutstanding.toLocaleString("en-IN"),
+    businessName,
+    businessPhone,
+  }, "both");
 
   const waLink = generateWhatsAppLink(payment.borrower.phone, waReceiptText);
 
@@ -74,19 +68,19 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
     <AppShell user={user}>
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Navigation & Action Bar (Hidden on Print) */}
-        <div className="flex items-center justify-between no-print">
+        <div className="flex flex-wrap items-center justify-between gap-3 no-print">
           <Link href="/payments">
-            <Button size="sm" variant="outline" className="gap-1.5">
+            <Button size="sm" variant="outline" className="gap-1.5 h-10 px-4">
               <ArrowLeft className="h-4 w-4" />
-              <span>Back to Payments</span>
+              <span>Back to Payments (मागे जा)</span>
             </Button>
           </Link>
 
           <div className="flex items-center gap-2">
             <a href={waLink} target="_blank" rel="noreferrer">
-              <Button size="sm" variant="outline" className="text-emerald-700 border-emerald-300 hover:bg-emerald-50 gap-1.5">
-                <MessageSquare className="h-4 w-4 text-emerald-600" />
-                <span>Share on WhatsApp</span>
+              <Button size="sm" variant="outline" className="text-emerald-400 border-emerald-700 bg-emerald-950/40 hover:bg-emerald-900/60 gap-1.5 h-10 px-4">
+                <MessageSquare className="h-4 w-4 text-emerald-400" />
+                <span>WhatsApp पावती पाठवा</span>
               </Button>
             </a>
 
@@ -97,26 +91,29 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
         {/* Printable Receipt Box */}
         <div
           id="printable-receipt"
-          className="rounded-xl border border-slate-200 bg-white p-8 shadow-xs text-slate-900 print:border-none print:shadow-none print:p-0"
+          className="rounded-2xl border border-slate-700 bg-white p-6 sm:p-8 shadow-xl text-slate-900 print:border-none print:shadow-none print:p-0"
         >
           {/* Header */}
-          <div className="flex items-start justify-between border-b border-slate-200 pb-6">
+          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-6">
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-slate-900 flex items-center justify-center text-white print:border print:border-black">
-                  <Landmark className="h-4 w-4" />
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-slate-900 flex items-center justify-center text-white print:border print:border-black">
+                  <Landmark className="h-5 w-5" />
                 </div>
-                <h1 className="text-lg font-bold tracking-tight text-slate-900">
-                  {businessName}
-                </h1>
+                <div>
+                  <h1 className="text-lg font-bold tracking-tight text-slate-900">
+                    {businessName}
+                  </h1>
+                  <span className="text-[11px] text-slate-500 font-medium">रोहित कागदेवाड कर्ज वसुली व व्यवस्थापन</span>
+                </div>
               </div>
-              <p className="text-xs text-slate-500">{businessAddress}</p>
-              <p className="text-xs text-slate-500 font-mono">Contact: {businessPhone}</p>
+              <p className="text-xs text-slate-600 mt-1">{businessAddress}</p>
+              <p className="text-xs text-slate-600 font-mono">मोबाईल: {businessPhone}</p>
             </div>
 
             <div className="text-right">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 block">
-                Official Payment Receipt
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 block">
+                अधिकृत पावती (Official Receipt)
               </span>
               <span className="text-sm font-bold font-mono text-slate-900 block mt-0.5">
                 {payment.receiptNumber}
@@ -129,40 +126,40 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
 
           {/* Reversal Banner if applicable */}
           {payment.status === "REVERSED" && (
-            <div className="my-4 rounded-md bg-red-50 border border-red-300 p-3 text-red-800 text-xs">
-              <strong className="font-semibold block">TRANSACTION REVERSED</strong>
+            <div className="my-4 rounded-lg bg-red-50 border border-red-300 p-3 text-red-800 text-xs">
+              <strong className="font-semibold block">TRANSACTION REVERSED (व्यवहार रद्द करण्यात आला आहे)</strong>
               <span>Reason: {payment.reversalReason || "Administrative reversal"}</span>
             </div>
           )}
 
           {/* Details Grid */}
-          <div className="grid grid-cols-2 gap-6 py-6 border-b border-slate-100 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 py-6 border-b border-slate-100 text-xs">
             <div>
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">
-                Received From (Borrower)
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide block mb-1">
+                कर्जदार तपशील (Received From)
               </span>
               <div className="font-bold text-sm text-slate-900">{payment.borrower.fullName}</div>
-              <div className="font-mono text-slate-600 mt-0.5">+91 {payment.borrower.phone}</div>
-              <div className="text-slate-500 mt-0.5">{payment.borrower.address}, {payment.borrower.city}</div>
-              <div className="text-slate-400 text-[10px] font-mono mt-0.5">ID: {payment.borrower.borrowerCode}</div>
+              <div className="font-mono text-slate-700 mt-0.5">+91 {payment.borrower.phone}</div>
+              <div className="text-slate-600 mt-0.5">{payment.borrower.address}, {payment.borrower.city}</div>
+              <div className="text-slate-500 text-[10px] font-mono mt-0.5">ID: {payment.borrower.borrowerCode}</div>
             </div>
 
-            <div className="text-right space-y-1">
+            <div className="sm:text-right space-y-1">
               <div>
-                <span className="text-slate-400">Payment Date:</span>{" "}
+                <span className="text-slate-500">पावती तारीख (Date):</span>{" "}
                 <span className="font-mono font-medium text-slate-800">{formatDate(payment.paymentDate)}</span>
               </div>
               <div>
-                <span className="text-slate-400">Loan Reference:</span>{" "}
+                <span className="text-slate-500">कर्ज खाते (Loan ID):</span>{" "}
                 <span className="font-mono font-bold text-blue-600">{payment.loan.loanCode}</span>
               </div>
               <div>
-                <span className="text-slate-400">Payment Mode:</span>{" "}
+                <span className="text-slate-500">भरणा प्रकार (Mode):</span>{" "}
                 <span className="font-semibold text-slate-800">{payment.paymentMode}</span>
               </div>
               {payment.referenceNumber && (
                 <div>
-                  <span className="text-slate-400">Ref / UTR:</span>{" "}
+                  <span className="text-slate-500">संदर्भ / UTR No:</span>{" "}
                   <span className="font-mono text-slate-800">{payment.referenceNumber}</span>
                 </div>
               )}
@@ -174,33 +171,33 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                  <th className="py-2">Description</th>
-                  <th className="py-2 text-right">Amount Allocated</th>
+                  <th className="py-2">तपशील (Description)</th>
+                  <th className="py-2 text-right">जमा रक्कम (Allocated)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-mono">
                 <tr>
-                  <td className="py-2.5 text-slate-700">Principal Component Allocated</td>
+                  <td className="py-2.5 text-slate-700">मुद्दल घटक (Principal Component)</td>
                   <td className="py-2.5 text-right font-medium text-slate-900">
                     {formatCurrency(payment.principalAllocated)}
                   </td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 text-slate-700">Interest Component Allocated</td>
+                  <td className="py-2.5 text-slate-700">व्याज घटक (Interest Component)</td>
                   <td className="py-2.5 text-right font-medium text-slate-900">
                     {formatCurrency(payment.interestAllocated)}
                   </td>
                 </tr>
                 {payment.lateFeeAllocated > 0 && (
                   <tr>
-                    <td className="py-2.5 text-slate-700">Late Fee / Penalty Cleared</td>
+                    <td className="py-2.5 text-slate-700">लेट फी दंड (Late Fee Penalty Cleared)</td>
                     <td className="py-2.5 text-right font-medium text-slate-900">
                       {formatCurrency(payment.lateFeeAllocated)}
                     </td>
                   </tr>
                 )}
                 <tr className="bg-slate-50/80 font-bold text-sm">
-                  <td className="py-3 px-2 text-slate-900">Total Payment Received</td>
+                  <td className="py-3 px-2 text-slate-900">एकूण जमा रक्कम (Total Received)</td>
                   <td className="py-3 px-2 text-right text-emerald-700">
                     {formatCurrency(payment.amount)}
                   </td>
@@ -210,30 +207,30 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
           </div>
 
           {/* Balance & Authorization Footer */}
-          <div className="pt-6 flex items-end justify-between text-xs">
+          <div className="pt-6 flex flex-wrap items-end justify-between gap-6 text-xs">
             <div className="space-y-1">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                Remaining Loan Balance
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                उर्वरित कर्ज बाकी (Remaining Balance)
               </div>
               <div className="text-base font-bold font-mono text-slate-900">
                 {formatCurrency(payment.loan.totalOutstanding)}
               </div>
-              <div className="text-[10px] text-slate-400">
-                Recorded By: {payment.collectedBy.name}
+              <div className="text-[10px] text-slate-500">
+                नोंद ऑपरेटर (Cashier): {payment.collectedBy.name}
               </div>
             </div>
 
-            <div className="text-right space-y-12">
-              <div className="h-10"></div>
-              <div className="border-t border-slate-300 pt-1 text-[11px] text-slate-500">
-                Authorized Signature / Stamp
+            <div className="text-right space-y-10">
+              <div className="h-6"></div>
+              <div className="border-t border-slate-400 pt-1 text-[11px] text-slate-600 font-medium">
+                स्वाक्षरी / सही व शिक्का (Authorized Signature)
               </div>
             </div>
           </div>
 
           {/* Computer generated disclaimer */}
-          <div className="mt-8 pt-4 border-t border-slate-100 text-center text-[10px] text-slate-400">
-            This is a computer-generated receipt issued by Rohit Kagdewad Lending Management System.
+          <div className="mt-8 pt-4 border-t border-slate-100 text-center text-[10px] text-slate-500">
+            ही पावती संगणकीय प्रणालीद्वारे तयार केलेली आहे &bull; Rohit Kagdewad Lending Management System
           </div>
         </div>
       </div>

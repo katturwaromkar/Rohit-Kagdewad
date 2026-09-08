@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { MobileNav } from "./MobileNav";
+import { NotificationPrompt } from "@/components/ui/NotificationPrompt";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -21,7 +22,7 @@ export function AppShell({ children, user }: AppShellProps) {
   const userRole = user?.role || "OWNER";
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased">
       {/* Desktop Fixed Sidebar */}
       <Sidebar userRole={userRole} userName={userName} />
 
@@ -33,12 +34,15 @@ export function AppShell({ children, user }: AppShellProps) {
         />
 
         {/* Page Content Container with mobile bottom padding */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 lg:pb-12">
+        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 lg:pb-12">
           {children}
         </main>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation Drawer & Bottom Bar */}
         <MobileNav userRole={userRole} userName={userName} />
+
+        {/* Mobile Push Notification Prompt */}
+        <NotificationPrompt />
       </div>
     </div>
   );

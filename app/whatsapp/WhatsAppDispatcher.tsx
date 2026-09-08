@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Send, Play, CheckCircle2, AlertCircle } from "lucide-react";
+import { Send, Play, CheckCircle2, AlertCircle, Languages } from "lucide-react";
 
 interface DispatcherProps {
   borrowers: Array<{
@@ -19,6 +19,7 @@ export function WhatsAppDispatcher({ borrowers }: DispatcherProps) {
   const router = useRouter();
   const [selectedBorrowerId, setSelectedBorrowerId] = useState(borrowers[0]?.id || "");
   const [templateType, setTemplateType] = useState("DUE_TODAY");
+  const [language, setLanguage] = useState<"both" | "mr" | "en">("both");
   const [customText, setCustomText] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
@@ -26,12 +27,17 @@ export function WhatsAppDispatcher({ borrowers }: DispatcherProps) {
 
   // Cron Simulation
   const [isCronRunning, setIsCronRunning] = useState(false);
-  const [cronSummary, setCronSummary] = useState<any>(null);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatusMsg("");
     setErrorMsg("");
+
+    if (!selectedBorrowerId) {
+      setErrorMsg("Please select a borrower first.");
+      return;
+    }
+
     setIsSending(true);
 
     try {
@@ -42,6 +48,7 @@ export function WhatsAppDispatcher({ borrowers }: DispatcherProps) {
           borrowerId: selectedBorrowerId,
           templateType: templateType === "CUSTOM" ? null : templateType,
           customMessage: templateType === "CUSTOM" ? customText : null,
+          language,
         }),
       });
 
@@ -52,7 +59,7 @@ export function WhatsAppDispatcher({ borrowers }: DispatcherProps) {
         return;
       }
 
-      setStatusMsg(`WhatsApp notification dispatched successfully! (Status: ${data.message.status})`);
+      setStatusMsg(`WhatsApp message dispatched successfully! (Status: ${data.message.status})`);
       setIsSending(false);
       router.refresh();
     } catch (err) {
@@ -65,7 +72,6 @@ export function WhatsAppDispatcher({ borrowers }: DispatcherProps) {
     setIsCronRunning(true);
     setErrorMsg("");
     setStatusMsg("");
-    setCronSummary(null);
 
     try {
       const res = await fetch("/api/cron/reminders?key=rk-lending-cron-secure-2026");
@@ -77,8 +83,7 @@ export function WhatsAppDispatcher({ borrowers }: DispatcherProps) {
         return;
       }
 
-      setCronSummary(data.summary);
-      setStatusMsg(`Cron job executed successfully. Sent: ${data.summary.sentCount}, Skipped (Deduplicated): ${data.summary.skippedCount}`);
+      setStatusMsg(`Cron job executed successfully. Sent: ${data.summary?.sentCount || 0}, Skipped: ${data.summary?.skippedCount || 0}`);
       setIsCronRunning(false);
       router.refresh();
     } catch (err) {
@@ -90,118 +95,173 @@ export function WhatsAppDispatcher({ borrowers }: DispatcherProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
       {/* Test Dispatcher Box (7 cols) */}
-      <Card className="lg:col-span-7 bg-white border-blue-200">
-        <CardHeader className="py-3.5 bg-blue-50/40 border-b border-blue-100">
-          <div className="flex items-center gap-2">
-            <Send className="h-4 w-4 text-blue-600" />
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-800">
-              Manual Notification Dispatcher
-            </CardTitle>
+      <Card className="lg:col-span-7 bg-slate-900 border-slate-800">
+        <CardHeader className="py-3.5 bg-slate-800/60 border-b border-slate-800">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Send className="h-4 w-4 text-blue-400" />
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-white">
+                Notification Dispatcher (मेसेज पाठवा)
+              </CardTitle>
+            </div>
+            <span className="flex items-center gap-1 text-[11px] text-slate-400">
+              <Languages className="h-3.5 w-3.5 text-blue-400" />
+              English & मराठी
+            </span>
           </div>
         </CardHeader>
         <CardContent className="p-4 space-y-3">
           {statusMsg && (
-            <div className="rounded-md bg-emerald-50 border border-emerald-200 p-2.5 text-emerald-800 text-xs flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+            <div className="rounded-lg bg-emerald-950/60 border border-emerald-800/80 p-2.5 text-emerald-300 text-xs flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
               <span>{statusMsg}</span>
             </div>
           )}
 
           {errorMsg && (
-            <div className="rounded-md bg-red-50 border border-red-200 p-2.5 text-red-800 text-xs flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+            <div className="rounded-lg bg-red-950/60 border border-red-800/80 p-2.5 text-red-300 text-xs flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
               <span>{errorMsg}</span>
             </div>
           )}
 
-          <form onSubmit={handleSendMessage} className="space-y-3 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  Recipient Borrower
-                </label>
-                <select
-                  required
-                  value={selectedBorrowerId}
-                  onChange={(e) => setSelectedBorrowerId(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 p-1.5 focus:border-blue-600 focus:outline-none"
-                >
-                  {borrowers.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.fullName} (+91 {b.phone})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  Message Template
-                </label>
-                <select
-                  value={templateType}
-                  onChange={(e) => setTemplateType(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 p-1.5 focus:border-blue-600 focus:outline-none"
-                >
-                  <option value="DUE_TODAY">Payment Due Today</option>
-                  <option value="DUE_IN_2_DAYS">Due in 2 Days Notice</option>
-                  <option value="OVERDUE_NOTICE">Overdue Warning</option>
-                  <option value="LOAN_DISBURSED">Loan Disbursal Confirmation</option>
-                  <option value="CUSTOM">Custom Freeform Message</option>
-                </select>
-              </div>
+          {borrowers.length === 0 ? (
+            <div className="text-center py-6 text-slate-400 text-xs">
+              No borrowers registered yet. Add a borrower first to send WhatsApp messages.
             </div>
+          ) : (
+            <form onSubmit={handleSendMessage} className="space-y-3 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-medium mb-1">
+                    Recipient Borrower (कर्जदार)
+                  </label>
+                  <select
+                    required
+                    value={selectedBorrowerId}
+                    onChange={(e) => setSelectedBorrowerId(e.target.value)}
+                    className="w-full rounded-lg border border-slate-700 bg-slate-950 text-white p-2 focus:border-blue-500 focus:outline-none"
+                  >
+                    {borrowers.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.fullName} (+91 {b.phone})
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            {templateType === "CUSTOM" && (
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  Custom Message Content
-                </label>
-                <textarea
-                  rows={3}
-                  required
-                  placeholder="Type message text..."
-                  value={customText}
-                  onChange={(e) => setCustomText(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 p-2 text-xs focus:border-blue-600 focus:outline-none"
-                />
+                <div>
+                  <label className="block text-slate-300 font-medium mb-1">
+                    Message Template (नमुना)
+                  </label>
+                  <select
+                    value={templateType}
+                    onChange={(e) => setTemplateType(e.target.value)}
+                    className="w-full rounded-lg border border-slate-700 bg-slate-950 text-white p-2 focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="DUE_TODAY">Payment Due Today (आज देय हप्ता)</option>
+                    <option value="DUE_IN_2_DAYS">Due in 2 Days Notice (२ दिवसांत देय)</option>
+                    <option value="OVERDUE_NOTICE">Overdue Warning (थकबाकी सूचना)</option>
+                    <option value="LOAN_DISBURSED">Loan Disbursed (कर्ज वाटप माहिती)</option>
+                    <option value="PAYMENT_RECEIPT">Payment Receipt (पावती मेसेज)</option>
+                    <option value="CUSTOM">Custom Freeform Text (स्वतःचा मेसेज)</option>
+                  </select>
+                </div>
               </div>
-            )}
 
-            <div className="flex justify-end pt-1">
-              <Button
-                type="submit"
-                size="sm"
-                isLoading={isSending}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 font-semibold"
-              >
-                <Send className="h-3.5 w-3.5" />
-                <span>Send WhatsApp Message</span>
-              </Button>
-            </div>
-          </form>
+              {/* Language Selection */}
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">
+                  Language Preference (भाषा निवडा)
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setLanguage("both")}
+                    className={`py-1.5 px-2 rounded-lg border text-xs font-medium transition-colors ${
+                      language === "both"
+                        ? "bg-blue-600 border-blue-500 text-white"
+                        : "bg-slate-950 border-slate-700 text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Bilingual (दोन्ही)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLanguage("mr")}
+                    className={`py-1.5 px-2 rounded-lg border text-xs font-medium transition-colors ${
+                      language === "mr"
+                        ? "bg-blue-600 border-blue-500 text-white"
+                        : "bg-slate-950 border-slate-700 text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    मराठी Only
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLanguage("en")}
+                    className={`py-1.5 px-2 rounded-lg border text-xs font-medium transition-colors ${
+                      language === "en"
+                        ? "bg-blue-600 border-blue-500 text-white"
+                        : "bg-slate-950 border-slate-700 text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    English Only
+                  </button>
+                </div>
+              </div>
+
+              {templateType === "CUSTOM" && (
+                <div>
+                  <label className="block text-slate-300 font-medium mb-1">
+                    Custom Message Content
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    placeholder="Type message text in Marathi or English..."
+                    value={customText}
+                    onChange={(e) => setCustomText(e.target.value)}
+                    className="w-full rounded-lg border border-slate-700 bg-slate-950 text-white p-2.5 text-xs focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-end pt-1">
+                <Button
+                  type="submit"
+                  size="sm"
+                  isLoading={isSending}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 font-semibold h-9 px-4"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  <span>Send WhatsApp Message</span>
+                </Button>
+              </div>
+            </form>
+          )}
         </CardContent>
       </Card>
 
       {/* Automated Daily Cron Trigger Panel (5 cols) */}
-      <Card className="lg:col-span-5 bg-white border-slate-200">
-        <CardHeader className="py-3.5 bg-slate-50 border-b border-slate-100">
+      <Card className="lg:col-span-5 bg-slate-900 border-slate-800">
+        <CardHeader className="py-3.5 bg-slate-800/60 border-b border-slate-800">
           <div className="flex items-center gap-2">
-            <Play className="h-4 w-4 text-blue-600" />
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-800">
-              Automated Daily Cron Engine
+            <Play className="h-4 w-4 text-blue-400" />
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-white">
+              Automated Daily Reminders
             </CardTitle>
           </div>
         </CardHeader>
         <CardContent className="p-4 space-y-3 text-xs">
-          <p className="text-slate-500 leading-relaxed">
-            In production, Vercel Cron automatically triggers <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[10px]">/api/cron/reminders</code> every morning at 09:00 AM IST.
+          <p className="text-slate-400 leading-relaxed">
+            Automated cron scans all upcoming and overdue installments every morning at 09:00 AM IST and dispatches bilingual WhatsApp reminders.
           </p>
 
-          <div className="rounded-lg bg-slate-50 p-3 border border-slate-200 space-y-1 text-slate-700 font-mono text-[11px]">
+          <div className="rounded-lg bg-slate-950 p-3 border border-slate-800 space-y-1.5 text-slate-300 font-mono text-[11px]">
             <div>&bull; Scans: Dues Today, Due in 2 Days, Overdues</div>
-            <div>&bull; Guards: Prevents duplicate reminders on same day</div>
-            <div>&bull; Security: Bearer Secret Token Protected</div>
+            <div>&bull; Auto Deduplication: Prevents double messaging</div>
+            <div>&bull; Languages: Automatic Marathi & English</div>
           </div>
 
           <Button
@@ -210,10 +270,10 @@ export function WhatsAppDispatcher({ borrowers }: DispatcherProps) {
             variant="outline"
             isLoading={isCronRunning}
             onClick={handleRunCron}
-            className="w-full gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50 font-semibold"
+            className="w-full h-9 gap-1.5 border-slate-700 bg-slate-950 text-slate-200 hover:bg-slate-800 font-semibold"
           >
-            <Play className="h-3.5 w-3.5 text-blue-600" />
-            <span>Simulate Daily Cron Run Now</span>
+            <Play className="h-3.5 w-3.5 text-blue-400" />
+            <span>Run Morning Reminder Cycle Now</span>
           </Button>
         </CardContent>
       </Card>
