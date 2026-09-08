@@ -31,17 +31,23 @@ export default function LoginPage() {
         body: JSON.stringify({ email: email.trim(), password }),
       });
 
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = { error: `Server returned error ${res.status}. Please check Vercel DATABASE_URL environment variable.` };
+      }
+
       if (!res.ok) {
-        setErrorMsg(data.error || "Invalid credentials. Please check and try again.");
+        setErrorMsg(data.error || "Invalid credentials or account inactive.");
         setIsLoading(false);
         return;
       }
 
       router.push("/");
       router.refresh();
-    } catch (err) {
-      setErrorMsg("Network connection error. Please try again.");
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Network error. Please check your internet connection.");
       setIsLoading(false);
     }
   };

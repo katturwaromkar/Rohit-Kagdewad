@@ -53,31 +53,53 @@ export async function POST(req: NextRequest) {
     };
 
     const token = signToken(sessionPayload);
-    await setSessionCookie(token);
 
-    // Update last login
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
-    });
+    // Update last login (non-fatal if fails)
+    try {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date() },
+      });
+    } catch (e) {
+      console.warn("Could not update lastLoginAt (non-fatal):", e);
+    }
 
-    // Audit log
-    await logAudit({
-      userId: user.id,
-      action: "LOGIN",
-      entityType: "USER",
-      entityId: user.id,
-      newValues: { email: user.email, role: user.role },
-    });
+    // Audit log (non-fatal if fails)
+    try {
+      await logAudit({
+        userId: user.id,
+        action: "LOGIN",
+        entityType: "USER",
+        entityId: user.id,
+        newValues: { email: user.email, role: user.role },
+      });
+    } catch (e) {
+      console.warn("Audit log error on login (non-fatal):", e);
+    }
 
-    return NextResponse.json({
+    // Create response and set cookie directly on NextResponse
+    const response = NextResponse.json({
       success: true,
       user: sessionPayload,
     });
+
+    response.cookies.set("rk_lending_session", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
+
+    return response;
   } catch (error: any) {
-    console.error("Login API error:", error);
+    console.error("Login API error details:", error);
+    const errorMessage = error?.message?.includes("connect") || error?.message?.includes("P1001") || error?.message?.includes("database")
+      ? "Database connection failed. Please verify DATABASE_URL in Vercel environment variables."
+      : error?.message || "An unexpected error occurred during login.";
+
     return NextResponse.json(
-      { error: "An unexpected error occurred during login." },
+      { error: errorMessage },
       { status: 500 }
     );
   }
