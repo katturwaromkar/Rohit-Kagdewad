@@ -5,6 +5,7 @@ import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { MobileNav } from "./MobileNav";
 import { NotificationPrompt } from "@/components/ui/NotificationPrompt";
+import { Footer } from "./Footer";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -27,16 +28,21 @@ export function AppShell({ children, user }: AppShellProps) {
       <Sidebar userRole={userRole} userName={userName} />
 
       {/* Main Content Column */}
-      <div className="flex-1 lg:pl-64 flex flex-col">
+      <div className="flex-1 lg:pl-64 flex flex-col min-h-screen">
         <Header
           onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           userName={userName}
         />
 
         {/* Page Content Container with mobile bottom padding */}
-        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 lg:pb-12">
+        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-20 lg:pb-8">
           {children}
         </main>
+
+        {/* Global Footer */}
+        <div className="pb-16 lg:pb-0">
+          <Footer />
+        </div>
 
         {/* Mobile Navigation Drawer & Bottom Bar */}
         <MobileNav userRole={userRole} userName={userName} />

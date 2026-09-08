@@ -149,9 +149,26 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <div className="mt-8 text-center text-xs text-slate-400 flex flex-col items-center gap-1">
+        <div className="mt-8 text-center text-xs text-slate-400 flex flex-col items-center gap-2">
           <p className="font-medium text-slate-400">Rohit Kagdewad &bull; Private Lending Operations</p>
           <p className="text-[11px] text-slate-400">Station Road, Nanded, Maharashtra</p>
+          <div className="w-full pt-4 border-t border-slate-800/80 text-[11px] text-slate-400">
+            Developed by{" "}
+            <a
+              href="https://www.yugvextechsolutions.site/"
+              target="_self"
+              className="text-blue-400 hover:text-blue-300 font-semibold underline underline-offset-2 transition-colors"
+            >
+              Yugvex Tech Solutions
+            </a>
+            , Pune. Contact No &ndash;{" "}
+            <a
+              href="tel:7219290885"
+              className="text-slate-300 hover:text-white font-medium transition-colors"
+            >
+              7219290885
+            </a>
+          </div>
         </div>
       </div>
     </div>
