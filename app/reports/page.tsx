@@ -3,21 +3,6 @@ import prisma from "@/lib/db";
 import { getSessionUser } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import {
-  FileBarChart,
-  Download,
-  Printer,
-  Calendar,
-  Filter,
-  TrendingUp,
-  Receipt,
-  CreditCard,
-  AlertCircle,
-} from "lucide-react";
 import { ReportsViewer } from "./ReportsViewer";
 
 interface ReportsPageProps {
@@ -82,14 +67,14 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-slate-900">
-                Financial Reports & Statements
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                Financial Reports & Audit Statements (अहवाल व ताळेबंद)
               </h1>
-              <span className="rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+              <span className="rounded-full bg-slate-800 border border-slate-700 px-2.5 py-0.5 text-xs font-semibold text-slate-300 font-mono">
                 Accounting Ready
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-400 mt-1">
               Generate daily collection sheets, monthly P&L interest registers, loan disbursement books, and aging exposure matrices.
             </p>
           </div>

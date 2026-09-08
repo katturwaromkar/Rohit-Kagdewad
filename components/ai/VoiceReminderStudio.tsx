@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { generateVoiceScript, VoiceReminderType, VoiceTone } from "@/lib/ai/voice";
@@ -12,11 +12,10 @@ import {
   Volume2,
   Send,
   Languages,
-  Sparkles,
   CheckCircle2,
   AlertCircle,
-  Radio,
-  Share2,
+  Copy,
+  Check,
 } from "lucide-react";
 
 interface BorrowerOption {
@@ -53,7 +52,7 @@ export function VoiceReminderStudio({
   const [speechRate, setSpeechRate] = useState(0.88);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
-  const [statusMsg, setStatusMsg] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const currentBorrower = borrowers.find((b) => b.id === selectedBorrowerId) || borrowers[0];
 
@@ -65,23 +64,23 @@ export function VoiceReminderStudio({
       const voices = window.speechSynthesis.getVoices();
       setAvailableVoices(voices);
 
-      // Look for Indian female voices
-      const indianFemaleVoice = voices.find(
-        (v) =>
-          (v.lang.includes("IN") || v.lang.includes("mr") || v.lang.includes("hi")) &&
-          (v.name.toLowerCase().includes("female") ||
-            v.name.toLowerCase().includes("heera") ||
-            v.name.toLowerCase().includes("neerja") ||
-            v.name.toLowerCase().includes("veena") ||
-            v.name.toLowerCase().includes("priya") ||
-            v.name.toLowerCase().includes("swara") ||
-            v.name.toLowerCase().includes("kalpana") ||
-            v.name.toLowerCase().includes("natural") ||
-            v.name.toLowerCase().includes("google"))
-      ) ||
-      voices.find((v) => v.lang.startsWith("mr") || v.lang.startsWith("hi") || v.lang === "en-IN") ||
-      voices.find((v) => v.lang.includes("en-IN")) ||
-      voices[0];
+      const indianFemaleVoice =
+        voices.find(
+          (v) =>
+            (v.lang.includes("IN") || v.lang.includes("mr") || v.lang.includes("hi")) &&
+            (v.name.toLowerCase().includes("female") ||
+              v.name.toLowerCase().includes("heera") ||
+              v.name.toLowerCase().includes("neerja") ||
+              v.name.toLowerCase().includes("veena") ||
+              v.name.toLowerCase().includes("priya") ||
+              v.name.toLowerCase().includes("swara") ||
+              v.name.toLowerCase().includes("kalpana") ||
+              v.name.toLowerCase().includes("natural") ||
+              v.name.toLowerCase().includes("google"))
+        ) ||
+        voices.find((v) => v.lang.startsWith("mr") || v.lang.startsWith("hi") || v.lang === "en-IN") ||
+        voices.find((v) => v.lang.includes("en-IN")) ||
+        voices[0];
 
       setSelectedVoice(indianFemaleVoice || null);
     };
@@ -111,7 +110,6 @@ export function VoiceReminderStudio({
     tone,
   });
 
-  // Play Indian Female Voice
   const handlePlayVoice = () => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
       alert("Speech synthesis is not supported on this browser.");
@@ -148,46 +146,52 @@ export function VoiceReminderStudio({
     }
   };
 
-  const whatsappUrl = currentBorrower
-    ? generateWhatsAppLink(currentBorrower.phone, scriptData.whatsappText)
-    : "#";
+  const handleCopyScript = () => {
+    navigator.clipboard.writeText(scriptData.whatsappTranscript);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const whatsappUrl = generateWhatsAppLink(
+    currentBorrower?.phone || "",
+    scriptData.whatsappTranscript
+  );
 
   return (
-    <Card className="bg-slate-900 border-slate-800 shadow-2xl overflow-hidden">
-      <CardHeader className="py-3.5 px-4 sm:px-6 bg-slate-800/60 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-        <div className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-pink-600/90 flex items-center justify-center text-white shadow-lg shadow-pink-600/20">
-            <Mic className="h-4 w-4" />
+    <Card className="overflow-hidden border-slate-800 bg-slate-900/90 shadow-2xl">
+      <CardHeader className="py-4 px-4 sm:px-6 bg-slate-950/60 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600/10 text-blue-400 border border-blue-500/20">
+            <Mic className="h-5 w-5" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">
-                AI Voice Reminder Studio (व्हाईस मेसेज)
-              </CardTitle>
-              <span className="rounded-full bg-pink-950/80 text-pink-300 border border-pink-800/80 px-2 py-0.5 text-[10px] font-semibold flex items-center gap-1">
-                <Sparkles className="h-3 w-3" />
-                Indian Female Voice
+            <CardTitle className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <span>Voice Reminders & Audio Dispatch</span>
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-medium">
+                मराठी / English Audio
               </span>
-            </div>
-            <p className="text-[11px] text-slate-400">Personalized voice notes in Marathi & Indian English</p>
+            </CardTitle>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Automated spoken payment notices synthesized in natural Indian female tone.
+            </p>
           </div>
         </div>
 
-        {/* Language Pill Switch */}
-        <div className="flex items-center rounded-lg bg-slate-950 p-1 border border-slate-800 text-[11px] w-full sm:w-auto">
+        {/* Language Selector */}
+        <div className="flex items-center p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs self-start sm:self-auto">
           <button
             type="button"
             onClick={() => {
               handleStopVoice();
               setLanguage("mr");
             }}
-            className={`flex-1 sm:flex-none text-center px-3 py-1 rounded-md font-medium transition-colors ${
+            className={`px-3 py-1 rounded-lg font-semibold transition-all ${
               language === "mr"
-                ? "bg-pink-600 text-white shadow-sm"
+                ? "bg-blue-600 text-white shadow-sm"
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            मराठी आवाज (Marathi)
+            मराठी आवाज
           </button>
           <button
             type="button"
@@ -195,13 +199,13 @@ export function VoiceReminderStudio({
               handleStopVoice();
               setLanguage("en");
             }}
-            className={`flex-1 sm:flex-none text-center px-3 py-1 rounded-md font-medium transition-colors ${
+            className={`px-3 py-1 rounded-lg font-semibold transition-all ${
               language === "en"
-                ? "bg-pink-600 text-white shadow-sm"
+                ? "bg-blue-600 text-white shadow-sm"
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            Indian English Voice
+            Indian English
           </button>
         </div>
       </CardHeader>
@@ -219,7 +223,7 @@ export function VoiceReminderStudio({
                 handleStopVoice();
                 setSelectedBorrowerId(e.target.value);
               }}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 text-white p-2.5 focus:border-pink-500 focus:outline-none"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 text-white p-2.5 focus:border-blue-500 focus:outline-none"
             >
               {borrowers.map((b) => (
                 <option key={b.id} value={b.id}>
@@ -231,7 +235,7 @@ export function VoiceReminderStudio({
 
           <div>
             <label className="block text-slate-300 font-medium mb-1">
-              Voice Message Type (प्रकार)
+              Notice Type (प्रकार)
             </label>
             <select
               value={reminderType}
@@ -239,13 +243,13 @@ export function VoiceReminderStudio({
                 handleStopVoice();
                 setReminderType(e.target.value as VoiceReminderType);
               }}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 text-white p-2.5 focus:border-pink-500 focus:outline-none"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 text-white p-2.5 focus:border-blue-500 focus:outline-none"
             >
-              <option value="DUE_TODAY">Payment Due Today (आजचा हप्ता)</option>
+              <option value="DUE_TODAY">Payment Due Today (आज देय हप्ता)</option>
               <option value="DUE_IN_2_DAYS">Due in 2 Days Notice (२ दिवसांत देय)</option>
               <option value="OVERDUE_ALERT">Overdue Urgent Alert (थकबाकी सूचना)</option>
-              <option value="PAYMENT_RECEIPT">Payment Receipt (पावती व्हाईस)</option>
-              <option value="LOAN_WELCOME">New Loan Welcome (कर्ज वाटप स्वागत)</option>
+              <option value="PAYMENT_RECEIPT">Payment Receipt Confirmation (पावती)</option>
+              <option value="LOAN_WELCOME">Loan Disbursal Welcome (कर्ज वाटप)</option>
             </select>
           </div>
 
@@ -261,71 +265,71 @@ export function VoiceReminderStudio({
                 setCustomAmount(e.target.value);
               }}
               placeholder="e.g. 5000"
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 text-white p-2.5 font-mono focus:border-pink-500 focus:outline-none"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 text-white p-2.5 font-mono focus:border-blue-500 focus:outline-none"
             />
           </div>
         </div>
 
         {/* Live Audio Visualizer Player Box */}
-        <div className="rounded-2xl border border-pink-900/60 bg-gradient-to-b from-slate-950 to-pink-950/20 p-4 sm:p-5 space-y-4">
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 sm:p-5 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={isPlaying ? handleStopVoice : handlePlayVoice}
-                className={`h-12 w-12 rounded-full flex items-center justify-center text-white shadow-xl transition-all active:scale-95 shrink-0 ${
+                className={`h-11 w-11 rounded-xl flex items-center justify-center text-white shadow-xl transition-all active:scale-95 shrink-0 ${
                   isPlaying
-                    ? "bg-red-600 hover:bg-red-700 shadow-red-600/30 animate-pulse"
-                    : "bg-pink-600 hover:bg-pink-700 shadow-pink-600/30"
+                    ? "bg-rose-600 hover:bg-rose-700 shadow-rose-600/30 animate-pulse"
+                    : "bg-blue-600 hover:bg-blue-500 shadow-blue-600/30"
                 }`}
                 title={isPlaying ? "Stop" : "Play Voice Preview"}
               >
                 {isPlaying ? (
-                  <Square className="h-5 w-5 fill-white" />
+                  <Square className="h-4 w-4 fill-white" />
                 ) : (
-                  <Play className="h-5 w-5 ml-0.5 fill-white" />
+                  <Play className="h-4 w-4 ml-0.5 fill-white" />
                 )}
               </button>
 
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-white">
-                    {isPlaying ? "Playing Indian Female Voice..." : "Indian Female Voice Ready"}
+                    {isPlaying ? "Playing Spoken Voice Note..." : "Audio Engine Ready"}
                   </span>
                   {isPlaying && (
                     <span className="flex h-2 w-2 relative">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-pink-500"></span>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                     </span>
                   )}
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  {language === "mr" ? "मराठी स्पष्ट उच्चार व सौम्य टोन" : "Polite Indian English Accent"} &bull; {speechRate}x Speed
+                  {language === "mr" ? "मराठी स्पष्ट उच्चार व व्यावसायिक टोन" : "Polite Indian Business Accent"} &bull; {speechRate}x Speed
                 </p>
               </div>
             </div>
 
-            {/* Speed Rate Slider */}
-            <div className="flex items-center gap-2 text-[11px] text-slate-400 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-800">
-              <span>Speed:</span>
+            {/* Speed Rate Selector */}
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-400 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800">
+              <span className="mr-1">Speed:</span>
               <button
                 type="button"
                 onClick={() => setSpeechRate(0.82)}
-                className={`px-2 py-0.5 rounded ${speechRate === 0.82 ? "bg-pink-600 text-white font-bold" : "text-slate-400 hover:text-white"}`}
+                className={`px-2 py-0.5 rounded font-medium ${speechRate === 0.82 ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"}`}
               >
                 0.8x
               </button>
               <button
                 type="button"
                 onClick={() => setSpeechRate(0.88)}
-                className={`px-2 py-0.5 rounded ${speechRate === 0.88 ? "bg-pink-600 text-white font-bold" : "text-slate-400 hover:text-white"}`}
+                className={`px-2 py-0.5 rounded font-medium ${speechRate === 0.88 ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"}`}
               >
-                0.9x (Natural)
+                0.9x
               </button>
               <button
                 type="button"
                 onClick={() => setSpeechRate(1.0)}
-                className={`px-2 py-0.5 rounded ${speechRate === 1.0 ? "bg-pink-600 text-white font-bold" : "text-slate-400 hover:text-white"}`}
+                className={`px-2 py-0.5 rounded font-medium ${speechRate === 1.0 ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"}`}
               >
                 1.0x
               </button>
@@ -333,7 +337,7 @@ export function VoiceReminderStudio({
           </div>
 
           {/* Animated Waveform Simulation */}
-          <div className="flex items-center justify-center gap-1 h-8 px-2 py-1 rounded-xl bg-slate-950/80 border border-slate-800/80">
+          <div className="flex items-center justify-center gap-1 h-7 px-2 py-1 rounded-xl bg-slate-950 border border-slate-800/80">
             {Array.from({ length: 32 }).map((_, i) => {
               const height = isPlaying
                 ? Math.max(15, Math.floor(Math.sin((i + Date.now() / 100) * 0.5) * 100))
@@ -343,7 +347,7 @@ export function VoiceReminderStudio({
                   key={i}
                   style={{ height: `${height}%` }}
                   className={`w-1 rounded-full transition-all duration-150 ${
-                    isPlaying ? "bg-pink-500" : "bg-slate-700"
+                    isPlaying ? "bg-emerald-500" : "bg-slate-700"
                   }`}
                 />
               );
@@ -352,19 +356,20 @@ export function VoiceReminderStudio({
 
           {/* Spoken Script Preview Box */}
           <div className="space-y-1.5">
-            <span className="text-[10px] font-semibold text-pink-400 uppercase tracking-wider block">
-              Spoken Transcript (व्हॉईस संदेश मजकूर)
-            </span>
+            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400">
+              <span className="uppercase tracking-wider">Spoken Message Transcript (मजकूर)</span>
+              <span className="text-[10px] text-slate-500">Estimated Duration: ~{scriptData.durationSec}s</span>
+            </div>
             <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 leading-relaxed font-sans">
               "{scriptData.script}"
             </div>
           </div>
         </div>
 
-        {/* WhatsApp Dispatch Action Bar */}
+        {/* Action Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
           <div className="text-xs text-slate-400">
-            Recipient: <span className="text-white font-medium">{currentBorrower?.fullName}</span> (+91 {currentBorrower?.phone})
+            Recipient: <span className="text-white font-semibold">{currentBorrower?.fullName}</span> (+91 {currentBorrower?.phone})
           </div>
 
           <div className="flex items-center gap-2">
@@ -372,11 +377,22 @@ export function VoiceReminderStudio({
               type="button"
               variant="outline"
               size="sm"
+              onClick={handleCopyScript}
+              className="h-9 px-3.5 border-slate-700 bg-slate-950 text-slate-300 hover:bg-slate-800 text-xs gap-1.5"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+              <span>{copied ? "Copied" : "Copy Text"}</span>
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={isPlaying ? handleStopVoice : handlePlayVoice}
               className="h-9 px-3.5 border-slate-700 bg-slate-950 text-slate-300 hover:bg-slate-800 text-xs gap-1.5"
             >
-              <Volume2 className="h-4 w-4 text-pink-400" />
-              <span>{isPlaying ? "Stop" : "Test Voice"}</span>
+              <Volume2 className="h-4 w-4 text-blue-400" />
+              <span>{isPlaying ? "Stop Audio" : "Listen Audio"}</span>
             </Button>
 
             <a
@@ -388,7 +404,7 @@ export function VoiceReminderStudio({
               <Button
                 type="button"
                 size="sm"
-                className="w-full sm:w-auto h-9 px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs gap-1.5 shadow-lg shadow-emerald-600/20"
+                className="w-full sm:w-auto h-9 px-5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs gap-1.5 shadow-lg shadow-emerald-600/20"
               >
                 <Send className="h-4 w-4" />
                 <span>Send via WhatsApp</span>

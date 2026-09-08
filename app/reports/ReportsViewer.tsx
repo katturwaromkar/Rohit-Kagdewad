@@ -36,11 +36,11 @@ export function ReportsViewer({
   const [endDate, setEndDate] = useState("");
 
   const reportTabs = [
-    { id: "COLLECTIONS", label: "Daily Collections Register", icon: Receipt },
-    { id: "INTEREST", label: "Interest Realization (P&L)", icon: TrendingUp },
-    { id: "DISBURSEMENTS", label: "Loan Disbursements", icon: CreditCard },
-    { id: "AGING", label: "Overdue Aging Exposure", icon: AlertCircle },
-    { id: "PORTFOLIO", label: "Borrower Portfolio Statement", icon: FileBarChart },
+    { id: "COLLECTIONS", label: "Daily Collections Register (वसुली नोंद)", icon: Receipt },
+    { id: "INTEREST", label: "Interest Realization P&L (व्याज नफा)", icon: TrendingUp },
+    { id: "DISBURSEMENTS", label: "Loan Disbursements (कर्ज वाटप)", icon: CreditCard },
+    { id: "AGING", label: "Overdue Aging Exposure (थकबाकी)", icon: AlertCircle },
+    { id: "PORTFOLIO", label: "Borrower Portfolio Exposure", icon: FileBarChart },
   ];
 
   // Filter Payments by date
@@ -103,31 +103,21 @@ export function ReportsViewer({
           l.status,
         ]);
       }
-    } else if (reportType === "PORTFOLIO") {
-      rows.push(["Borrower Code", "Borrower Name", "Phone", "City", "Occupation", "Total Loans", "Active Loans", "Total Borrowed", "Total Repaid", "Current Outstanding", "Status"]);
-      for (const b of borrowers) {
-        const bActiveLoans = b.loans.filter((l: any) => l.status === "ACTIVE" || l.status === "OVERDUE");
-        const bTotalBorrowed = b.loans.reduce((sum: number, l: any) => sum + l.principalAmount, 0);
-        const bTotalRepaid = b.payments.filter((p: any) => p.status === "SUCCESS").reduce((sum: number, p: any) => sum + p.amount, 0);
-        const bOutstanding = bActiveLoans.reduce((sum: number, l: any) => sum + l.totalOutstanding, 0);
-
+    } else if (reportType === "INTEREST") {
+      rows.push(["Receipt No", "Date", "Borrower", "Loan Code", "Interest Amount", "Late Fee", "Net Income"]);
+      for (const p of filteredPayments) {
         rows.push([
-          b.borrowerCode,
-          b.fullName,
-          b.phone,
-          b.city,
-          b.occupation || "-",
-          b.loans.length.toString(),
-          bActiveLoans.length.toString(),
-          bTotalBorrowed.toString(),
-          bTotalRepaid.toString(),
-          bOutstanding.toString(),
-          b.status,
+          p.receiptNumber,
+          formatDate(p.paymentDate),
+          p.borrower.fullName,
+          p.loan.loanCode,
+          p.interestAllocated.toString(),
+          p.lateFeeAllocated.toString(),
+          (p.interestAllocated + p.lateFeeAllocated).toString(),
         ]);
       }
-    } else {
-      // Overdue aging export
-      rows.push(["Borrower Name", "Phone", "Loan Code", "Installment #", "Due Date", "Due Amount", "Status"]);
+    } else if (reportType === "AGING") {
+      rows.push(["Borrower", "Phone", "Loan Code", "Installment #", "Due Date", "Days Overdue", "Overdue Amount"]);
       for (const inst of overdueInstallments) {
         rows.push([
           inst.loan.borrower.fullName,
@@ -136,12 +126,29 @@ export function ReportsViewer({
           inst.installmentNumber.toString(),
           formatDate(inst.dueDate),
           (inst.totalDue - inst.totalPaid).toString(),
-          inst.status,
+        ]);
+      }
+    } else if (reportType === "PORTFOLIO") {
+      rows.push(["Borrower Code", "Borrower Name", "Mobile", "City", "Total Borrowed", "Total Repaid", "Current Outstanding", "Status"]);
+      for (const b of borrowers) {
+        const totalB = b.loans.reduce((s: number, l: any) => s + l.principalAmount, 0);
+        const totalR = b.payments.filter((p: any) => p.status === "SUCCESS").reduce((s: number, p: any) => s + p.amount, 0);
+        const activeL = b.loans.filter((l: any) => l.status === "ACTIVE" || l.status === "OVERDUE");
+        const outst = activeL.reduce((s: number, l: any) => s + l.totalOutstanding, 0);
+        rows.push([
+          b.borrowerCode,
+          b.fullName,
+          b.phone,
+          b.city || "-",
+          totalB.toString(),
+          totalR.toString(),
+          outst.toString(),
+          b.status,
         ]);
       }
     }
 
-    const csvContent = "data:text/csv;charset=utf-8," + rows.map((e) => e.map((cell) => `"${cell}"`).join(",")).join("\n");
+    const csvContent = "data:text/csv;charset=utf-8," + rows.map((e) => e.map(val => `"${val}"`).join(",")).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -152,101 +159,103 @@ export function ReportsViewer({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Report Switcher & Filter Controls */}
-      <Card className="bg-white border-slate-200">
-        <CardContent className="p-4 space-y-4">
-          {/* Report Category Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-            {reportTabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = reportType === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setReportType(tab.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold whitespace-nowrap transition-colors ${
-                    isActive
-                      ? "bg-slate-900 text-white shadow-xs"
-                      : "bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
+    <div className="space-y-5">
+      {/* Report Categories */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+        {reportTabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = reportType === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setReportType(tab.id)}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                isActive
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                  : "bg-slate-900 text-slate-400 border border-slate-800 hover:text-white hover:bg-slate-800"
+              }`}
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
 
-          {/* Date Range & Action Buttons */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-500">Date Range:</span>
+      {/* Filter and Export Bar */}
+      <Card className="p-4 border-slate-800 bg-slate-900/90">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="font-semibold text-slate-400 flex items-center gap-1">
+              <Calendar className="h-3.5 w-3.5 text-blue-400" />
+              <span>Date Filter:</span>
+            </span>
+
+            <div className="flex items-center gap-1.5">
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+                className="h-8 rounded-lg border border-slate-700 bg-slate-950 px-2.5 text-xs text-white focus:border-blue-500 focus:outline-none"
               />
-              <span className="text-xs text-slate-400">to</span>
+              <span className="text-slate-500">to</span>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+                className="h-8 rounded-lg border border-slate-700 bg-slate-950 px-2.5 text-xs text-white focus:border-blue-500 focus:outline-none"
               />
-              {(startDate || endDate) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStartDate("");
-                    setEndDate("");
-                  }}
-                  className="text-xs text-blue-600 hover:underline font-medium"
-                >
-                  Reset
-                </button>
-              )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => window.print()}
-                className="gap-1.5 text-xs text-slate-700"
+            {(startDate || endDate) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStartDate("");
+                  setEndDate("");
+                }}
+                className="text-xs text-blue-400 hover:underline font-medium ml-1"
               >
-                <Printer className="h-4 w-4" />
-                <span>Print Statement</span>
-              </Button>
-
-              <Button
-                size="sm"
-                onClick={exportToCSV}
-                className="bg-slate-900 hover:bg-slate-800 text-white gap-1.5 text-xs font-semibold shadow-sm"
-              >
-                <Download className="h-4 w-4" />
-                <span>Export CSV / Excel</span>
-              </Button>
-            </div>
+                Reset
+              </button>
+            )}
           </div>
-        </CardContent>
+
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => window.print()}
+              className="gap-1.5 text-xs h-8"
+            >
+              <Printer className="h-3.5 w-3.5" />
+              <span>Print Statement</span>
+            </Button>
+
+            <Button
+              size="sm"
+              onClick={exportToCSV}
+              className="bg-blue-600 hover:bg-blue-500 text-white gap-1.5 text-xs font-semibold shadow-lg shadow-blue-600/20 h-8"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span>Export CSV / Excel</span>
+            </Button>
+          </div>
+        </div>
       </Card>
 
       {/* Report 1: Daily Collections Register */}
       {reportType === "COLLECTIONS" && (
-        <Card className="overflow-hidden">
-          <CardHeader className="py-3 bg-slate-50 border-b border-slate-200">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-700">
-                Payment Collections Register ({filteredPayments.length} Transactions)
-              </CardTitle>
-            </div>
+        <Card className="overflow-hidden border-slate-800 bg-slate-900">
+          <CardHeader className="py-3 px-4 bg-slate-950/60 border-b border-slate-800">
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-white">
+              Payment Collections Register ({filteredPayments.length} Transactions)
+            </CardTitle>
           </CardHeader>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-600">
-              <thead className="bg-slate-100/70 text-slate-700 font-semibold border-b border-slate-200 uppercase tracking-wider text-[10px]">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
                 <tr>
                   <th className="px-4 py-3">Receipt No</th>
                   <th className="px-4 py-3">Date</th>
@@ -259,33 +268,33 @@ export function ReportsViewer({
                   <th className="px-4 py-3 text-right">Total Amount</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 font-mono">
+              <tbody className="divide-y divide-slate-800/80 font-mono">
                 {filteredPayments.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50/80">
-                    <td className="px-4 py-2.5 font-semibold text-slate-900">{p.receiptNumber}</td>
-                    <td className="px-4 py-2.5">{formatDate(p.paymentDate)}</td>
-                    <td className="px-4 py-2.5 font-sans font-medium text-slate-900">{p.borrower.fullName}</td>
-                    <td className="px-4 py-2.5 text-blue-600 font-medium">{p.loan.loanCode}</td>
-                    <td className="px-4 py-2.5 font-sans">{p.paymentMode}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-700">{formatCurrency(p.principalAllocated)}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-700">{formatCurrency(p.interestAllocated)}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-700">{formatCurrency(p.lateFeeAllocated)}</td>
-                    <td className="px-4 py-2.5 text-right font-bold text-emerald-700">{formatCurrency(p.amount)}</td>
+                  <tr key={p.id} className="hover:bg-slate-800/50 transition-colors">
+                    <td className="px-4 py-2.5 font-semibold text-white">{p.receiptNumber}</td>
+                    <td className="px-4 py-2.5 text-slate-400">{formatDate(p.paymentDate)}</td>
+                    <td className="px-4 py-2.5 font-sans font-medium text-white">{p.borrower.fullName}</td>
+                    <td className="px-4 py-2.5 text-blue-400 font-medium">{p.loan.loanCode}</td>
+                    <td className="px-4 py-2.5 font-sans text-slate-300">{p.paymentMode}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-300">{formatCurrency(p.principalAllocated)}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-300">{formatCurrency(p.interestAllocated)}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-300">{formatCurrency(p.lateFeeAllocated)}</td>
+                    <td className="px-4 py-2.5 text-right font-bold text-emerald-400">{formatCurrency(p.amount)}</td>
                   </tr>
                 ))}
                 {/* Summary Row */}
-                <tr className="bg-slate-100/80 font-bold text-slate-900">
-                  <td colSpan={5} className="px-4 py-3 font-sans text-xs">Total Collections</td>
+                <tr className="bg-slate-950 font-bold text-white border-t border-slate-800">
+                  <td colSpan={5} className="px-4 py-3 font-sans text-xs">Total Collections (एकूण जमा)</td>
                   <td className="px-4 py-3 text-right">
                     {formatCurrency(filteredPayments.reduce((s, p) => s + p.principalAllocated, 0))}
                   </td>
-                  <td className="px-4 py-3 text-right text-emerald-700">
+                  <td className="px-4 py-3 text-right text-emerald-400">
                     {formatCurrency(filteredPayments.reduce((s, p) => s + p.interestAllocated, 0))}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right text-amber-400">
                     {formatCurrency(filteredPayments.reduce((s, p) => s + p.lateFeeAllocated, 0))}
                   </td>
-                  <td className="px-4 py-3 text-right text-emerald-800 text-sm">
+                  <td className="px-4 py-3 text-right text-emerald-400 text-sm">
                     {formatCurrency(filteredPayments.reduce((s, p) => s + p.amount, 0))}
                   </td>
                 </tr>
@@ -297,15 +306,15 @@ export function ReportsViewer({
 
       {/* Report 2: Interest Realization (P&L) */}
       {reportType === "INTEREST" && (
-        <Card className="overflow-hidden">
-          <CardHeader className="py-3 bg-slate-50 border-b border-slate-200">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-700">
-              Interest Earned & Profit Register
+        <Card className="overflow-hidden border-slate-800 bg-slate-900">
+          <CardHeader className="py-3 px-4 bg-slate-950/60 border-b border-slate-800">
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-white">
+              Interest Earned & Profit Register (व्याज व दंड नफा)
             </CardTitle>
           </CardHeader>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-600">
-              <thead className="bg-slate-100/70 text-slate-700 font-semibold border-b border-slate-200 uppercase tracking-wider text-[10px]">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
                 <tr>
                   <th className="px-4 py-3">Receipt No</th>
                   <th className="px-4 py-3">Date</th>
@@ -316,29 +325,29 @@ export function ReportsViewer({
                   <th className="px-4 py-3 text-right">Total Net Profit Realized</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 font-mono">
+              <tbody className="divide-y divide-slate-800/80 font-mono">
                 {filteredPayments.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50/80">
-                    <td className="px-4 py-2.5 font-semibold text-slate-900">{p.receiptNumber}</td>
-                    <td className="px-4 py-2.5">{formatDate(p.paymentDate)}</td>
-                    <td className="px-4 py-2.5 font-sans font-medium text-slate-900">{p.borrower.fullName}</td>
-                    <td className="px-4 py-2.5 text-blue-600">{p.loan.loanCode}</td>
-                    <td className="px-4 py-2.5 text-right font-semibold text-emerald-600">{formatCurrency(p.interestAllocated)}</td>
-                    <td className="px-4 py-2.5 text-right text-amber-700">{formatCurrency(p.lateFeeAllocated)}</td>
-                    <td className="px-4 py-2.5 text-right font-bold text-slate-900">
+                  <tr key={p.id} className="hover:bg-slate-800/50 transition-colors">
+                    <td className="px-4 py-2.5 font-semibold text-white">{p.receiptNumber}</td>
+                    <td className="px-4 py-2.5 text-slate-400">{formatDate(p.paymentDate)}</td>
+                    <td className="px-4 py-2.5 font-sans font-medium text-white">{p.borrower.fullName}</td>
+                    <td className="px-4 py-2.5 text-blue-400">{p.loan.loanCode}</td>
+                    <td className="px-4 py-2.5 text-right font-semibold text-emerald-400">{formatCurrency(p.interestAllocated)}</td>
+                    <td className="px-4 py-2.5 text-right text-amber-400">{formatCurrency(p.lateFeeAllocated)}</td>
+                    <td className="px-4 py-2.5 text-right font-bold text-white">
                       {formatCurrency(p.interestAllocated + p.lateFeeAllocated)}
                     </td>
                   </tr>
                 ))}
-                <tr className="bg-slate-100/80 font-bold text-slate-900">
-                  <td colSpan={4} className="px-4 py-3 font-sans text-xs">Total Realized Net Profit</td>
-                  <td className="px-4 py-3 text-right text-emerald-700">
+                <tr className="bg-slate-950 font-bold text-white border-t border-slate-800">
+                  <td colSpan={4} className="px-4 py-3 font-sans text-xs">Total Realized Net Profit (एकूण नफा)</td>
+                  <td className="px-4 py-3 text-right text-emerald-400">
                     {formatCurrency(filteredPayments.reduce((s, p) => s + p.interestAllocated, 0))}
                   </td>
-                  <td className="px-4 py-3 text-right text-amber-700">
+                  <td className="px-4 py-3 text-right text-amber-400">
                     {formatCurrency(filteredPayments.reduce((s, p) => s + p.lateFeeAllocated, 0))}
                   </td>
-                  <td className="px-4 py-3 text-right text-emerald-800 text-sm">
+                  <td className="px-4 py-3 text-right text-emerald-400 text-sm">
                     {formatCurrency(filteredPayments.reduce((s, p) => s + (p.interestAllocated + p.lateFeeAllocated), 0))}
                   </td>
                 </tr>
@@ -350,15 +359,15 @@ export function ReportsViewer({
 
       {/* Report 3: Loan Disbursements */}
       {reportType === "DISBURSEMENTS" && (
-        <Card className="overflow-hidden">
-          <CardHeader className="py-3 bg-slate-50 border-b border-slate-200">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-700">
+        <Card className="overflow-hidden border-slate-800 bg-slate-900">
+          <CardHeader className="py-3 px-4 bg-slate-950/60 border-b border-slate-800">
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-white">
               Loan Disbursement Register ({filteredLoans.length} Loans)
             </CardTitle>
           </CardHeader>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-600">
-              <thead className="bg-slate-100/70 text-slate-700 font-semibold border-b border-slate-200 uppercase tracking-wider text-[10px]">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
                 <tr>
                   <th className="px-4 py-3">Loan Code</th>
                   <th className="px-4 py-3">Disbursed Date</th>
@@ -370,25 +379,25 @@ export function ReportsViewer({
                   <th className="px-4 py-3 text-center">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-800/80">
                 {filteredLoans.map((l) => (
-                  <tr key={l.id} className="hover:bg-slate-50/80">
-                    <td className="px-4 py-2.5 font-mono font-semibold text-blue-600">{l.loanCode}</td>
-                    <td className="px-4 py-2.5 font-mono">{formatDate(l.disbursementDate)}</td>
-                    <td className="px-4 py-2.5 font-medium text-slate-900">{l.borrower.fullName}</td>
-                    <td className="px-4 py-2.5 text-right font-mono font-semibold text-slate-900">{formatCurrency(l.principalAmount)}</td>
-                    <td className="px-4 py-2.5">{l.interestRate}% p.a. &bull; {l.interestType.replace("_", " ")}</td>
-                    <td className="px-4 py-2.5 text-right font-mono font-medium text-slate-700">{formatCurrency(l.totalAmountExpected)}</td>
-                    <td className="px-4 py-2.5 text-right font-mono font-bold text-slate-900">{formatCurrency(l.totalOutstanding)}</td>
+                  <tr key={l.id} className="hover:bg-slate-800/50 transition-colors">
+                    <td className="px-4 py-2.5 font-mono font-semibold text-blue-400">{l.loanCode}</td>
+                    <td className="px-4 py-2.5 font-mono text-slate-400">{formatDate(l.disbursementDate)}</td>
+                    <td className="px-4 py-2.5 font-medium text-white">{l.borrower.fullName}</td>
+                    <td className="px-4 py-2.5 text-right font-mono font-semibold text-white">{formatCurrency(l.principalAmount)}</td>
+                    <td className="px-4 py-2.5 text-slate-300">{l.interestRate}% p.a. &bull; {l.interestType.replace("_", " ")}</td>
+                    <td className="px-4 py-2.5 text-right font-mono font-medium text-slate-300">{formatCurrency(l.totalAmountExpected)}</td>
+                    <td className="px-4 py-2.5 text-right font-mono font-bold text-white">{formatCurrency(l.totalOutstanding)}</td>
                     <td className="px-4 py-2.5 text-center"><Badge status={l.status} /></td>
                   </tr>
                 ))}
-                <tr className="bg-slate-100/80 font-bold text-slate-900 font-mono">
-                  <td colSpan={3} className="px-4 py-3 font-sans text-xs">Total Disbursed Capital</td>
+                <tr className="bg-slate-950 font-bold text-white font-mono border-t border-slate-800">
+                  <td colSpan={3} className="px-4 py-3 font-sans text-xs">Total Disbursed Capital (एकूण वाटप)</td>
                   <td className="px-4 py-3 text-right">{formatCurrency(filteredLoans.reduce((s, l) => s + l.principalAmount, 0))}</td>
                   <td></td>
                   <td className="px-4 py-3 text-right">{formatCurrency(filteredLoans.reduce((s, l) => s + l.totalAmountExpected, 0))}</td>
-                  <td className="px-4 py-3 text-right text-blue-700">{formatCurrency(filteredLoans.reduce((s, l) => s + l.totalOutstanding, 0))}</td>
+                  <td className="px-4 py-3 text-right text-blue-400">{formatCurrency(filteredLoans.reduce((s, l) => s + l.totalOutstanding, 0))}</td>
                   <td></td>
                 </tr>
               </tbody>
@@ -399,15 +408,15 @@ export function ReportsViewer({
 
       {/* Report 4: Overdue Aging */}
       {reportType === "AGING" && (
-        <Card className="overflow-hidden">
-          <CardHeader className="py-3 bg-slate-50 border-b border-slate-200">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-700">
-              Overdue Aging Analysis Register
+        <Card className="overflow-hidden border-slate-800 bg-slate-900">
+          <CardHeader className="py-3 px-4 bg-slate-950/60 border-b border-slate-800">
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-white">
+              Overdue Aging Analysis Register (थकबाकी वर्गीकरण)
             </CardTitle>
           </CardHeader>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-600">
-              <thead className="bg-slate-100/70 text-slate-700 font-semibold border-b border-slate-200 uppercase tracking-wider text-[10px]">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
                 <tr>
                   <th className="px-4 py-3">Borrower Name</th>
                   <th className="px-4 py-3">Phone</th>
@@ -418,15 +427,15 @@ export function ReportsViewer({
                   <th className="px-4 py-3 text-center">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-800/80">
                 {overdueInstallments.map((inst) => (
-                  <tr key={inst.id} className="hover:bg-red-50/20">
-                    <td className="px-4 py-2.5 font-medium text-slate-900">{inst.loan.borrower.fullName}</td>
-                    <td className="px-4 py-2.5 font-mono">+91 {inst.loan.borrower.phone}</td>
-                    <td className="px-4 py-2.5 font-mono text-blue-600">{inst.loan.loanCode}</td>
-                    <td className="px-4 py-2.5 font-mono">EMI #{inst.installmentNumber}</td>
-                    <td className="px-4 py-2.5 font-mono">{formatDate(inst.dueDate)}</td>
-                    <td className="px-4 py-2.5 text-right font-mono font-bold text-red-600">
+                  <tr key={inst.id} className="hover:bg-rose-950/20 transition-colors">
+                    <td className="px-4 py-2.5 font-medium text-white">{inst.loan.borrower.fullName}</td>
+                    <td className="px-4 py-2.5 font-mono text-slate-400">+91 {inst.loan.borrower.phone}</td>
+                    <td className="px-4 py-2.5 font-mono text-blue-400">{inst.loan.loanCode}</td>
+                    <td className="px-4 py-2.5 font-mono text-slate-300">EMI #{inst.installmentNumber}</td>
+                    <td className="px-4 py-2.5 font-mono text-slate-400">{formatDate(inst.dueDate)}</td>
+                    <td className="px-4 py-2.5 text-right font-mono font-bold text-rose-400">
                       {formatCurrency(inst.totalDue - inst.totalPaid)}
                     </td>
                     <td className="px-4 py-2.5 text-center"><Badge status={inst.status} /></td>
@@ -440,15 +449,15 @@ export function ReportsViewer({
 
       {/* Report 5: Borrower Portfolio Statement */}
       {reportType === "PORTFOLIO" && (
-        <Card className="overflow-hidden">
-          <CardHeader className="py-3 bg-slate-50 border-b border-slate-200">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-700">
+        <Card className="overflow-hidden border-slate-800 bg-slate-900">
+          <CardHeader className="py-3 px-4 bg-slate-950/60 border-b border-slate-800">
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-white">
               Complete Borrower Portfolio Exposure Statement
             </CardTitle>
           </CardHeader>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-600">
-              <thead className="bg-slate-100/70 text-slate-700 font-semibold border-b border-slate-200 uppercase tracking-wider text-[10px]">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
                 <tr>
                   <th className="px-4 py-3">Code & Name</th>
                   <th className="px-4 py-3">Phone</th>
@@ -460,7 +469,7 @@ export function ReportsViewer({
                   <th className="px-4 py-3 text-center">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-800/80">
                 {borrowers.map((b) => {
                   const activeL = b.loans.filter((l: any) => l.status === "ACTIVE" || l.status === "OVERDUE");
                   const totalB = b.loans.reduce((s: number, l: any) => s + l.principalAmount, 0);
@@ -468,16 +477,16 @@ export function ReportsViewer({
                   const outst = activeL.reduce((s: number, l: any) => s + l.totalOutstanding, 0);
 
                   return (
-                    <tr key={b.id} className="hover:bg-slate-50/80 font-mono">
-                      <td className="px-4 py-2.5 font-sans font-medium text-slate-900">
+                    <tr key={b.id} className="hover:bg-slate-800/50 font-mono transition-colors">
+                      <td className="px-4 py-2.5 font-sans font-medium text-white">
                         {b.fullName} <span className="text-[10px] text-slate-400 font-mono">({b.borrowerCode})</span>
                       </td>
-                      <td className="px-4 py-2.5">+91 {b.phone}</td>
-                      <td className="px-4 py-2.5 font-sans">{b.occupation || b.city}</td>
-                      <td className="px-4 py-2.5 text-center">{activeL.length}</td>
-                      <td className="px-4 py-2.5 text-right font-medium text-slate-700">{formatCurrency(totalB)}</td>
-                      <td className="px-4 py-2.5 text-right font-medium text-emerald-700">{formatCurrency(totalR)}</td>
-                      <td className="px-4 py-2.5 text-right font-bold text-slate-900">{formatCurrency(outst)}</td>
+                      <td className="px-4 py-2.5 text-slate-400">+91 {b.phone}</td>
+                      <td className="px-4 py-2.5 font-sans text-slate-300">{b.occupation || b.city}</td>
+                      <td className="px-4 py-2.5 text-center text-white">{activeL.length}</td>
+                      <td className="px-4 py-2.5 text-right font-medium text-slate-300">{formatCurrency(totalB)}</td>
+                      <td className="px-4 py-2.5 text-right font-medium text-emerald-400">{formatCurrency(totalR)}</td>
+                      <td className="px-4 py-2.5 text-right font-bold text-white">{formatCurrency(outst)}</td>
                       <td className="px-4 py-2.5 text-center font-sans"><Badge status={b.status} /></td>
                     </tr>
                   );
