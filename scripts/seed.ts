@@ -20,7 +20,7 @@ async function main() {
   console.log("✓ Test borrowers, loans, and payments purged");
 
   // 2. Create / Upsert Business Owner (Rohit Kagdewad)
-  const ownerPasswordHash = await bcrypt.hash("Password@123", 10);
+  const ownerPasswordHash = await bcrypt.hash("Rohit@123", 10);
   const owner = await prisma.user.upsert({
     where: { email: "rohit@lending.com" },
     update: {
@@ -43,7 +43,7 @@ async function main() {
   console.log(`✓ Owner account ready: ${owner.email} (Phone: ${owner.phone})`);
 
   // 3. Create / Upsert Staff User
-  const staffPasswordHash = await bcrypt.hash("Password@123", 10);
+  const staffPasswordHash = await bcrypt.hash("Staff@123", 10);
   const staff = await prisma.user.upsert({
     where: { email: "staff@lending.com" },
     update: {
