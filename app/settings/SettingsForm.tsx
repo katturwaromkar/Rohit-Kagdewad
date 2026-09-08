@@ -8,11 +8,14 @@ import {
   Landmark,
   Percent,
   MessageSquare,
+  Smartphone,
   ShieldCheck,
   CheckCircle2,
   AlertCircle,
-  Database,
   Download,
+  Send,
+  Loader2,
+  Radio,
 } from "lucide-react";
 
 interface SettingsFormProps {
@@ -24,13 +27,22 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   const [formData, setFormData] = useState({
     BUSINESS_NAME: initialSettings["BUSINESS_NAME"] || "Rohit Kagdewad Lending Management",
     OWNER_NAME: initialSettings["OWNER_NAME"] || "Rohit Kagdewad",
-    BUSINESS_PHONE: initialSettings["BUSINESS_PHONE"] || "+91 98765 43210",
+    BUSINESS_PHONE: initialSettings["BUSINESS_PHONE"] || "+91 96652 69105",
     BUSINESS_ADDRESS: initialSettings["BUSINESS_ADDRESS"] || "Station Road, Nanded, Maharashtra - 431601",
     TIMEZONE: initialSettings["TIMEZONE"] || "Asia/Kolkata",
     CURRENCY_SYMBOL: initialSettings["CURRENCY_SYMBOL"] || "₹",
     DEFAULT_LATE_FEE_RATE: initialSettings["DEFAULT_LATE_FEE_RATE"] || "0.1",
     DEFAULT_GRACE_PERIOD_DAYS: initialSettings["DEFAULT_GRACE_PERIOD_DAYS"] || "3",
     DEFAULT_INTEREST_RATE: initialSettings["DEFAULT_INTEREST_RATE"] || "24",
+    // SMSLocal.in DLT Gateway Settings
+    SMS_LOCAL_API_KEY: initialSettings["SMS_LOCAL_API_KEY"] || "",
+    SMS_LOCAL_SENDER_ID: initialSettings["SMS_LOCAL_SENDER_ID"] || "RHTKAG",
+    SMS_LOCAL_ROUTE: initialSettings["SMS_LOCAL_ROUTE"] || "4",
+    SMS_LOCAL_DLT_DUE_TODAY: initialSettings["SMS_LOCAL_DLT_DUE_TODAY"] || "",
+    SMS_LOCAL_DLT_OVERDUE: initialSettings["SMS_LOCAL_DLT_OVERDUE"] || "",
+    SMS_LOCAL_DLT_RECEIPT: initialSettings["SMS_LOCAL_DLT_RECEIPT"] || "",
+    SMS_LOCAL_DLT_WELCOME: initialSettings["SMS_LOCAL_DLT_WELCOME"] || "",
+    // WhatsApp Cloud API Settings
     WHATSAPP_PHONE_NUMBER_ID: initialSettings["WHATSAPP_PHONE_NUMBER_ID"] || "",
     WHATSAPP_BUSINESS_ACCOUNT_ID: initialSettings["WHATSAPP_BUSINESS_ACCOUNT_ID"] || "",
     WHATSAPP_ACCESS_TOKEN: initialSettings["WHATSAPP_ACCESS_TOKEN"] || "",
@@ -40,6 +52,11 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Test SMS State
+  const [testPhone, setTestPhone] = useState("");
+  const [isTestingSMS, setIsTestingSMS] = useState(false);
+  const [testSMSResult, setTestSMSResult] = useState<{ success?: boolean; message?: string } | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -64,12 +81,58 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         return;
       }
 
-      setStatusMsg("Business settings updated successfully.");
+      setStatusMsg("Business and gateway settings saved successfully.");
       setIsSaving(false);
       router.refresh();
     } catch {
       setErrorMsg("Network error saving settings.");
       setIsSaving(false);
+    }
+  };
+
+  const handleTestSMS = async () => {
+    if (!testPhone) {
+      alert("Please enter a 10-digit mobile number for test SMS.");
+      return;
+    }
+
+    setIsTestingSMS(true);
+    setTestSMSResult(null);
+
+    try {
+      const res = await fetch("/api/sms/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: testPhone,
+          templateType: "DUE_TODAY",
+          isTest: true,
+          customMessage: `Test SMS from ${formData.BUSINESS_NAME} via SMSLocal.in Gateway. System operational at ${new Date().toLocaleTimeString()}.`,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setTestSMSResult({
+          success: true,
+          message: data.isMock
+            ? "Simulated Test SMS Successful! (API Key is not yet set; configure your live SMSLocal.in Account Key above for live carrier delivery)."
+            : "Live Carrier SMS dispatched successfully via SMSLocal.in!",
+        });
+      } else {
+        setTestSMSResult({
+          success: false,
+          message: data.error || "SMS dispatch failed.",
+        });
+      }
+    } catch {
+      setTestSMSResult({
+        success: false,
+        message: "Network error sending test SMS.",
+      });
+    } finally {
+      setIsTestingSMS(false);
     }
   };
 
@@ -102,7 +165,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
-    } catch (err) {
+    } catch {
       alert("Failed to export backup data.");
     }
   };
@@ -110,58 +173,58 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {statusMsg && (
-        <div className="rounded-md bg-emerald-50 border border-emerald-200 p-3 text-emerald-800 text-xs flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+        <div className="rounded-xl bg-emerald-950/60 border border-emerald-800/80 p-3.5 text-emerald-300 text-xs flex items-center gap-2 shadow-lg">
+          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
           <span>{statusMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-3 text-red-800 text-xs flex items-center gap-2">
-          <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+        <div className="rounded-xl bg-rose-950/60 border border-rose-800/80 p-3.5 text-rose-300 text-xs flex items-center gap-2 shadow-lg">
+          <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* Section 1: Business Profile */}
-      <Card className="bg-white border-slate-200">
-        <CardHeader className="py-4 bg-slate-50 border-b border-slate-100">
+      <Card className="bg-slate-900 border-slate-800 shadow-xl overflow-hidden">
+        <CardHeader className="py-3.5 px-4 sm:px-5 bg-slate-950/60 border-b border-slate-800">
           <div className="flex items-center gap-2">
-            <Landmark className="h-4 w-4 text-blue-600" />
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-800">
-              Enterprise Business Profile
+            <Landmark className="h-4 w-4 text-blue-400" />
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              Enterprise Business Profile (संस्था माहिती)
             </CardTitle>
           </div>
         </CardHeader>
-        <CardContent className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+        <CardContent className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
           <div>
-            <label className="block text-slate-700 font-semibold mb-1">
-              Business Name
+            <label className="block text-slate-400 font-semibold mb-1">
+              Business Name (संस्थेचे नाव)
             </label>
             <input
               type="text"
               name="BUSINESS_NAME"
               value={formData.BUSINESS_NAME}
               onChange={handleChange}
-              className="w-full rounded-md border border-slate-300 p-2 focus:border-blue-600 focus:outline-none"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-white focus:border-blue-500 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-slate-700 font-semibold mb-1">
-              Proprietor / Owner Name
+            <label className="block text-slate-400 font-semibold mb-1">
+              Proprietor / Owner Name (मालकाचे नाव)
             </label>
             <input
               type="text"
               name="OWNER_NAME"
               value={formData.OWNER_NAME}
               onChange={handleChange}
-              className="w-full rounded-md border border-slate-300 p-2 focus:border-blue-600 focus:outline-none"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-white focus:border-blue-500 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-slate-700 font-semibold mb-1">
+            <label className="block text-slate-400 font-semibold mb-1">
               Official Contact Mobile (for Receipts & SMS)
             </label>
             <input
@@ -169,12 +232,12 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
               name="BUSINESS_PHONE"
               value={formData.BUSINESS_PHONE}
               onChange={handleChange}
-              className="w-full rounded-md border border-slate-300 p-2 font-mono focus:border-blue-600 focus:outline-none"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 font-mono text-white focus:border-blue-500 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-slate-700 font-semibold mb-1">
+            <label className="block text-slate-400 font-semibold mb-1">
               Business Office Address
             </label>
             <input
@@ -182,25 +245,25 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
               name="BUSINESS_ADDRESS"
               value={formData.BUSINESS_ADDRESS}
               onChange={handleChange}
-              className="w-full rounded-md border border-slate-300 p-2 focus:border-blue-600 focus:outline-none"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-white focus:border-blue-500 focus:outline-none"
             />
           </div>
         </CardContent>
       </Card>
 
       {/* Section 2: Default Lending & Late Fee Policies */}
-      <Card className="bg-white border-slate-200">
-        <CardHeader className="py-4 bg-slate-50 border-b border-slate-100">
+      <Card className="bg-slate-900 border-slate-800 shadow-xl overflow-hidden">
+        <CardHeader className="py-3.5 px-4 sm:px-5 bg-slate-950/60 border-b border-slate-800">
           <div className="flex items-center gap-2">
-            <Percent className="h-4 w-4 text-blue-600" />
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-800">
-              Default Lending & Late Fee Rules
+            <Percent className="h-4 w-4 text-blue-400" />
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              Default Lending & Late Fee Rules (व्याज व लेट फी नियम)
             </CardTitle>
           </div>
         </CardHeader>
-        <CardContent className="p-5 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+        <CardContent className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
           <div>
-            <label className="block text-slate-700 font-semibold mb-1">
+            <label className="block text-slate-400 font-semibold mb-1">
               Default Annual Interest Rate (% p.a.)
             </label>
             <input
@@ -209,12 +272,12 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
               name="DEFAULT_INTEREST_RATE"
               value={formData.DEFAULT_INTEREST_RATE}
               onChange={handleChange}
-              className="w-full rounded-md border border-slate-300 p-2 font-mono focus:border-blue-600 focus:outline-none"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 font-mono text-white focus:border-blue-500 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-slate-700 font-semibold mb-1">
+            <label className="block text-slate-400 font-semibold mb-1">
               Late Fee Daily Accrual (% / day)
             </label>
             <input
@@ -223,12 +286,12 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
               name="DEFAULT_LATE_FEE_RATE"
               value={formData.DEFAULT_LATE_FEE_RATE}
               onChange={handleChange}
-              className="w-full rounded-md border border-slate-300 p-2 font-mono focus:border-blue-600 focus:outline-none"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 font-mono text-white focus:border-blue-500 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-slate-700 font-semibold mb-1">
+            <label className="block text-slate-400 font-semibold mb-1">
               Grace Period (Days Before Penalties)
             </label>
             <input
@@ -236,30 +299,213 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
               name="DEFAULT_GRACE_PERIOD_DAYS"
               value={formData.DEFAULT_GRACE_PERIOD_DAYS}
               onChange={handleChange}
-              className="w-full rounded-md border border-slate-300 p-2 font-mono focus:border-blue-600 focus:outline-none"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 font-mono text-white focus:border-blue-500 focus:outline-none"
             />
           </div>
         </CardContent>
       </Card>
 
-      {/* Section 3: Official WhatsApp Business Cloud API Settings */}
-      <Card className="bg-white border-slate-200">
-        <CardHeader className="py-4 bg-slate-50 border-b border-slate-100">
+      {/* Section 3: SMSLocal.in DLT-Compliant SMS Gateway Integration */}
+      <Card className="bg-slate-900 border-slate-800 shadow-xl overflow-hidden">
+        <CardHeader className="py-3.5 px-4 sm:px-5 bg-slate-950/60 border-b border-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Smartphone className="h-4 w-4 text-blue-400" />
+              <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                SMSLocal.in DLT SMS Gateway (एसएमएस गेटवे)
+              </CardTitle>
+            </div>
+            <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-blue-950 text-blue-400 border border-blue-800 self-start sm:self-auto">
+              https://app.smslocal.in/api/smsapi
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-5 space-y-4 text-xs">
+          <p className="text-slate-400">
+            Configure your SMSLocal.in Account Key, approved Sender ID / Header, and DLT Template IDs to dispatch instant automated SMS reminders and receipts.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-slate-400 font-semibold mb-1">
+                Account Key / API Key (की)
+              </label>
+              <input
+                type="password"
+                name="SMS_LOCAL_API_KEY"
+                placeholder="Enter SMSLocal Account Key"
+                value={formData.SMS_LOCAL_API_KEY}
+                onChange={handleChange}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 font-mono text-white focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-400 font-semibold mb-1">
+                Approved Sender ID / Header
+              </label>
+              <input
+                type="text"
+                name="SMS_LOCAL_SENDER_ID"
+                placeholder="e.g. RHTKAG, RKFUND"
+                maxLength={6}
+                value={formData.SMS_LOCAL_SENDER_ID}
+                onChange={handleChange}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 font-mono text-white focus:border-blue-500 focus:outline-none uppercase"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-400 font-semibold mb-1">
+                Route Code
+              </label>
+              <input
+                type="text"
+                name="SMS_LOCAL_ROUTE"
+                placeholder="e.g. 4 (Transactional / OTP)"
+                value={formData.SMS_LOCAL_ROUTE}
+                onChange={handleChange}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 font-mono text-white focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* DLT Template IDs */}
+          <div className="pt-2 border-t border-slate-800/80">
+            <h4 className="font-semibold text-slate-300 text-xs mb-2">
+              DLT Approved Template IDs (नमुना आयडी)
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-slate-400 text-[11px] mb-1">
+                  Due Today Template ID
+                </label>
+                <input
+                  type="text"
+                  name="SMS_LOCAL_DLT_DUE_TODAY"
+                  placeholder="e.g. 120716..."
+                  value={formData.SMS_LOCAL_DLT_DUE_TODAY}
+                  onChange={handleChange}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2 font-mono text-white focus:border-blue-500 focus:outline-none text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 text-[11px] mb-1">
+                  Overdue Notice Template ID
+                </label>
+                <input
+                  type="text"
+                  name="SMS_LOCAL_DLT_OVERDUE"
+                  placeholder="e.g. 120716..."
+                  value={formData.SMS_LOCAL_DLT_OVERDUE}
+                  onChange={handleChange}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2 font-mono text-white focus:border-blue-500 focus:outline-none text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 text-[11px] mb-1">
+                  Payment Receipt Template ID
+                </label>
+                <input
+                  type="text"
+                  name="SMS_LOCAL_DLT_RECEIPT"
+                  placeholder="e.g. 120716..."
+                  value={formData.SMS_LOCAL_DLT_RECEIPT}
+                  onChange={handleChange}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2 font-mono text-white focus:border-blue-500 focus:outline-none text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 text-[11px] mb-1">
+                  Loan Sanction / Welcome ID
+                </label>
+                <input
+                  type="text"
+                  name="SMS_LOCAL_DLT_WELCOME"
+                  placeholder="e.g. 120716..."
+                  value={formData.SMS_LOCAL_DLT_WELCOME}
+                  onChange={handleChange}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2 font-mono text-white focus:border-blue-500 focus:outline-none text-xs"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Test SMS Dispatcher */}
+          <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-300 text-xs flex items-center gap-1.5">
+                <Radio className="h-3.5 w-3.5 text-emerald-400" />
+                Test SMS Gateway Connection
+              </span>
+              <span className="text-[10px] text-slate-500">Live Gateway Verification</span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <input
+                type="text"
+                placeholder="Enter 10-digit mobile number for test..."
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                className="flex-1 rounded-xl border border-slate-700 bg-slate-900 p-2 text-xs font-mono text-white focus:border-blue-500 focus:outline-none"
+              />
+              <Button
+                type="button"
+                onClick={handleTestSMS}
+                disabled={isTestingSMS}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs h-9 px-4 gap-1.5 shrink-0"
+              >
+                {isTestingSMS ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Send className="h-3.5 w-3.5" />
+                )}
+                <span>Send Test SMS</span>
+              </Button>
+            </div>
+
+            {testSMSResult && (
+              <div
+                className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
+                  testSMSResult.success
+                    ? "bg-emerald-950/60 border border-emerald-800/80 text-emerald-300"
+                    : "bg-rose-950/60 border border-rose-800/80 text-rose-300"
+                }`}
+              >
+                {testSMSResult.success ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
+                )}
+                <span>{testSMSResult.message}</span>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Section 4: Official WhatsApp Business Cloud API Settings */}
+      <Card className="bg-slate-900 border-slate-800 shadow-xl overflow-hidden">
+        <CardHeader className="py-3.5 px-4 sm:px-5 bg-slate-950/60 border-b border-slate-800">
           <div className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4 text-emerald-600" />
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-800">
+            <MessageSquare className="h-4 w-4 text-emerald-400" />
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-300">
               Meta WhatsApp Business Cloud API Integration
             </CardTitle>
           </div>
         </CardHeader>
-        <CardContent className="p-5 space-y-4 text-xs">
-          <p className="text-slate-500">
+        <CardContent className="p-4 sm:p-5 space-y-4 text-xs">
+          <p className="text-slate-400">
             Obtain credentials from your Meta for Developers App (WhatsApp Product &rarr; API Setup).
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-slate-700 font-semibold mb-1">
+              <label className="block text-slate-400 font-semibold mb-1">
                 WhatsApp Phone Number ID
               </label>
               <input
@@ -268,12 +514,12 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                 placeholder="e.g. 104293819283719"
                 value={formData.WHATSAPP_PHONE_NUMBER_ID}
                 onChange={handleChange}
-                className="w-full rounded-md border border-slate-300 p-2 font-mono focus:border-blue-600 focus:outline-none"
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 font-mono text-white focus:border-blue-500 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-slate-700 font-semibold mb-1">
+              <label className="block text-slate-400 font-semibold mb-1">
                 WhatsApp Business Account ID (WABA)
               </label>
               <input
@@ -282,13 +528,13 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                 placeholder="e.g. 204918291028371"
                 value={formData.WHATSAPP_BUSINESS_ACCOUNT_ID}
                 onChange={handleChange}
-                className="w-full rounded-md border border-slate-300 p-2 font-mono focus:border-blue-600 focus:outline-none"
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 font-mono text-white focus:border-blue-500 focus:outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-slate-700 font-semibold mb-1">
+            <label className="block text-slate-400 font-semibold mb-1">
               System User Permanent Access Token
             </label>
             <input
@@ -297,12 +543,12 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
               placeholder="EAAB..."
               value={formData.WHATSAPP_ACCESS_TOKEN}
               onChange={handleChange}
-              className="w-full rounded-md border border-slate-300 p-2 font-mono focus:border-blue-600 focus:outline-none"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 font-mono text-white focus:border-blue-500 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-slate-700 font-semibold mb-1">
+            <label className="block text-slate-400 font-semibold mb-1">
               Webhook Verification Secret Token
             </label>
             <input
@@ -310,19 +556,19 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
               name="WHATSAPP_VERIFY_TOKEN"
               value={formData.WHATSAPP_VERIFY_TOKEN}
               onChange={handleChange}
-              className="w-full rounded-md border border-slate-300 p-2 font-mono focus:border-blue-600 focus:outline-none"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 font-mono text-white focus:border-blue-500 focus:outline-none"
             />
           </div>
         </CardContent>
       </Card>
 
       {/* Save Changes Button */}
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
         <Button
           type="button"
           variant="outline"
           onClick={handleExportBackup}
-          className="gap-1.5 text-xs text-slate-700 border-slate-300"
+          className="gap-1.5 text-xs text-slate-300 border-slate-700 bg-slate-900 hover:bg-slate-800"
         >
           <Download className="h-4 w-4" />
           <span>Export Full Portfolio Backup (JSON)</span>
@@ -332,7 +578,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           type="submit"
           size="md"
           isLoading={isSaving}
-          className="bg-blue-600 hover:bg-blue-700 text-white min-w-[150px] font-semibold shadow-sm"
+          className="bg-blue-600 hover:bg-blue-500 text-white min-w-[160px] font-semibold shadow-lg shadow-blue-600/20"
         >
           Save All Settings
         </Button>

@@ -26,15 +26,15 @@ export default async function SettingsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-slate-900">
-                Business & System Settings
+              <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
+                Business & System Settings (प्रणाली मांडणी)
               </h1>
-              <span className="rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+              <span className="rounded-full bg-slate-800 border border-slate-700 px-2.5 py-0.5 text-xs font-semibold text-slate-300 font-mono">
                 Owner Controls
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Manage enterprise profile, interest defaults, late fee grace periods, WhatsApp Business API secrets, and portfolio backups.
+            <p className="text-xs text-slate-400 mt-1">
+              Manage enterprise profile, interest defaults, late fee rules, SMSLocal.in DLT SMS Gateway, WhatsApp Cloud API, and portfolio backups.
             </p>
           </div>
         </div>

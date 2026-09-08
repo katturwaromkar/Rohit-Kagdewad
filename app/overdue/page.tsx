@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { differenceInDays } from "date-fns";
 import { VoiceQuickButton } from "@/components/ai/VoiceQuickButton";
+import { SMSQuickButton } from "@/components/sms/SMSQuickButton";
 
 interface OverduePageProps {
   searchParams: {
@@ -299,6 +300,20 @@ export default async function OverduePage({ searchParams }: OverduePageProps) {
                               </Button>
                             </a>
 
+                            <SMSQuickButton
+                              borrowerName={item.loan.borrower.fullName}
+                              phone={item.loan.borrower.phone}
+                              amount={item.unpaidAmount}
+                              dueDate={formatDate(item.dueDate)}
+                              daysOverdue={item.daysOverdue}
+                              loanCode={item.loan.loanCode}
+                              type="OVERDUE"
+                              installmentId={item.id}
+                              borrowerId={item.loan.borrower.id}
+                              variant="icon"
+                              className="h-7 w-7"
+                            />
+
                             <VoiceQuickButton
                               borrowerName={item.loan.borrower.fullName}
                               phone={item.loan.borrower.phone}
@@ -319,7 +334,7 @@ export default async function OverduePage({ searchParams }: OverduePageProps) {
                             </a>
 
                             <Link href={`/payments?loanId=${item.loan.id}&borrowerId=${item.loan.borrower.id}&amount=${item.unpaidAmount}`}>
-                              <Button size="sm" className="h-7 px-2.5 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+                              <Button size="sm" className="h-7 px-2.5 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm">
                                 Collect
                               </Button>
                             </Link>

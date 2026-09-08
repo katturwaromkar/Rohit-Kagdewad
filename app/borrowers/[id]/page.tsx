@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { CreditScoreBadge } from "@/components/ai/CreditScoreBadge";
 import { VoiceQuickButton } from "@/components/ai/VoiceQuickButton";
+import { SMSQuickButton } from "@/components/sms/SMSQuickButton";
 
 interface BorrowerProfileProps {
   params: {
@@ -169,6 +170,17 @@ export default async function BorrowerProfilePage({ params, searchParams }: Borr
 
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2">
+            <SMSQuickButton
+              borrowerName={borrower.fullName}
+              phone={borrower.phone}
+              amount={targetInstallment ? Math.max(0, targetInstallment.totalDue - targetInstallment.totalPaid) : totalOutstanding}
+              dueDate={targetInstallment ? formatDate(targetInstallment.dueDate) : undefined}
+              loanCode={targetInstallment?.loanCode || activeLoans[0]?.loanCode}
+              type={firstOverdueInstallment ? "OVERDUE" : "DUE_TODAY"}
+              borrowerId={borrower.id}
+              variant="button"
+            />
+
             <VoiceQuickButton
               borrowerName={borrower.fullName}
               phone={borrower.phone}

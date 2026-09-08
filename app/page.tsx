@@ -28,6 +28,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { VoiceQuickButton } from "@/components/ai/VoiceQuickButton";
+import { SMSQuickButton } from "@/components/sms/SMSQuickButton";
 
 export default async function DashboardPage() {
   const user = await getSessionUser();
@@ -355,6 +356,19 @@ export default async function DashboardPage() {
                             </Button>
                           </a>
 
+                          <SMSQuickButton
+                            borrowerName={inst.loan.borrower.fullName}
+                            phone={inst.loan.borrower.phone}
+                            amount={unpaidAmount}
+                            dueDate={formatDate(inst.dueDate)}
+                            loanCode={inst.loan.loanCode}
+                            type="DUE_TODAY"
+                            installmentId={inst.id}
+                            borrowerId={inst.loan.borrower.id}
+                            variant="icon"
+                            className="h-7 w-7"
+                          />
+
                           <VoiceQuickButton
                             borrowerName={inst.loan.borrower.fullName}
                             phone={inst.loan.borrower.phone}
@@ -428,6 +442,19 @@ export default async function DashboardPage() {
                         <div className="text-right font-mono font-bold text-xs text-red-400">
                           {formatCurrency(unpaidAmount)}
                         </div>
+
+                        <SMSQuickButton
+                          borrowerName={inst.loan.borrower.fullName}
+                          phone={inst.loan.borrower.phone}
+                          amount={unpaidAmount}
+                          dueDate={formatDate(inst.dueDate)}
+                          loanCode={inst.loan.loanCode}
+                          type="OVERDUE"
+                          installmentId={inst.id}
+                          borrowerId={inst.loan.borrower.id}
+                          variant="icon"
+                          className="h-7 w-7"
+                        />
 
                         <VoiceQuickButton
                           borrowerName={inst.loan.borrower.fullName}

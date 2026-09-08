@@ -17,12 +17,12 @@ import {
   Clock,
   Play,
   ShieldCheck,
-  Phone,
+  Smartphone,
   RefreshCw,
-  Mic,
 } from "lucide-react";
 import { VoiceReminderStudio } from "@/components/ai/VoiceReminderStudio";
 import { WhatsAppDispatcher } from "./WhatsAppDispatcher";
+import { SMSDispatcher } from "@/components/sms/SMSDispatcher";
 
 export default async function WhatsAppCenterPage({
   searchParams,
@@ -131,14 +131,14 @@ export default async function WhatsAppCenterPage({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-                WhatsApp & Voice Notification Hub
+                Communications Hub (SMS, Voice & WhatsApp)
               </h1>
-              <span className="rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-xs font-semibold font-mono">
-                Meta Graph API v20.0
+              <span className="rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30 px-2.5 py-0.5 text-xs font-semibold font-mono">
+                SMSLocal + Meta Cloud
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-1">
-              Automated borrower payment reminders, spoken voice notices, and instant digital receipts.
+              Automated borrower payment reminders, DLT SMS notices, spoken voice notes, and digital receipts.
             </p>
           </div>
         </div>
@@ -181,6 +181,11 @@ export default async function WhatsAppCenterPage({
               <span>Active Guard</span>
             </div>
           </Card>
+        </div>
+
+        {/* SMSLocal.in SMS Dispatcher */}
+        <div className="space-y-3">
+          <SMSDispatcher borrowers={borrowers} />
         </div>
 
         {/* Voice Reminders Studio */}
