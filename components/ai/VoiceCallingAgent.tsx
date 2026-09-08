@@ -28,6 +28,9 @@ import {
   Sparkles,
   Search,
   ExternalLink,
+  Radio,
+  Loader2,
+  X,
 } from "lucide-react";
 
 export interface ScheduledCallItem {
@@ -112,6 +115,15 @@ export function VoiceCallingAgent({
   const [callDuration, setCallDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Outbound Telephony Calling State
+  const [isDispatchingTelephony, setIsDispatchingTelephony] = useState(false);
+  const [telephonyFeedback, setTelephonyFeedback] = useState<{
+    success: boolean;
+    message: string;
+    callId?: string;
+  } | null>(null);
+
 
   // Best Indian voice selector
   const [speechVoice, setSpeechVoice] = useState<SpeechSynthesisVoice | null>(null);
@@ -371,7 +383,62 @@ export function VoiceCallingAgent({
     }
   };
 
+  // Trigger Outbound Telephony Call to phone via Bolna AI / Telephony Engine
+  const handleDispatchTelephony = async (callData: {
+    phone: string;
+    borrowerName: string;
+    pendingAmount: number;
+    loanCode?: string;
+    dueDate?: string;
+    scheduledCallId?: string;
+    borrowerId?: string;
+  }) => {
+    setIsDispatchingTelephony(true);
+    setTelephonyFeedback(null);
+
+    try {
+      const res = await fetch("/api/voice-calls/dispatch-call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: callData.phone,
+          borrowerName: callData.borrowerName,
+          pendingAmount: callData.pendingAmount,
+          loanCode: callData.loanCode,
+          dueDate: callData.dueDate,
+          scheduledCallId: callData.scheduledCallId,
+          borrowerId: callData.borrowerId,
+          tone: callTone,
+          language: callLanguage === "mr" ? "mr-IN" : "en-IN",
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTelephonyFeedback({
+          success: true,
+          message: data.message || `Outbound AI Voice Call initiated to ${callData.phone}!`,
+          callId: data.callId,
+        });
+        fetchCalls();
+      } else {
+        setTelephonyFeedback({
+          success: false,
+          message: data.error || "Failed to dispatch telephony voice call.",
+        });
+      }
+    } catch {
+      setTelephonyFeedback({
+        success: false,
+        message: "Network error triggering telephony outbound call.",
+      });
+    } finally {
+      setIsDispatchingTelephony(false);
+    }
+  };
+
   // Filtered calls
+
   const filteredCalls = scheduledCalls.filter((c) => {
     const matchesSearch =
       c.borrowerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -454,6 +521,40 @@ export function VoiceCallingAgent({
           </Button>
         </div>
       </div>
+
+      {/* Telephony Dispatch Feedback Notification */}
+      {telephonyFeedback && (
+        <div
+          className={`rounded-2xl p-4 text-xs flex items-center justify-between gap-3 shadow-xl transition-all ${
+            telephonyFeedback.success
+              ? "bg-emerald-950/90 border border-emerald-800 text-emerald-300"
+              : "bg-rose-950/90 border border-rose-800 text-rose-300"
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            {telephonyFeedback.success ? (
+              <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+            ) : (
+              <AlertCircle className="h-5 w-5 text-rose-400 shrink-0" />
+            )}
+            <div>
+              <p className="font-semibold">{telephonyFeedback.message}</p>
+              {telephonyFeedback.callId && (
+                <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                  Call Reference ID: {telephonyFeedback.callId}
+                </p>
+              )}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setTelephonyFeedback(null)}
+            className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* TAB 1: SCHEDULED CALLS DESK */}
       {activeTab === "SCHEDULED_DESK" && (
@@ -610,21 +711,48 @@ export function VoiceCallingAgent({
                                     callId: call.id,
                                   })
                                 }
-                                title="Run Live AI Call Now"
+                                title="Run Browser AI Speech Simulator"
                                 className="p-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-[11px] flex items-center gap-1 transition-all shadow-sm"
                               >
                                 <PhoneForwarded className="w-3.5 h-3.5" />
-                                <span className="hidden md:inline">Call Now</span>
+                                <span className="hidden md:inline">Simulate</span>
+                              </button>
+
+                              {/* Outbound Carrier Call via Bolna AI API */}
+                              <button
+                                type="button"
+                                disabled={isDispatchingTelephony}
+                                onClick={() =>
+                                  handleDispatchTelephony({
+                                    phone: call.phone,
+                                    borrowerName: call.borrowerName,
+                                    pendingAmount: call.pendingAmount,
+                                    loanCode: call.loanCode || undefined,
+                                    dueDate: call.dueDate || undefined,
+                                    scheduledCallId: call.id,
+                                    borrowerId: call.borrowerId,
+                                  })
+                                }
+                                title="Dispatch Automated AI Phone Call (Bolna API)"
+                                className="p-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium text-[11px] flex items-center gap-1 transition-all shadow-sm"
+                              >
+                                {isDispatchingTelephony ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Radio className="w-3.5 h-3.5" />
+                                )}
+                                <span className="hidden md:inline">AI Carrier Call</span>
                               </button>
 
                               {/* Direct Phone Call */}
                               <a
                                 href={`tel:${call.phone.replace(/[^0-9+]/g, "")}`}
-                                title="Direct Phone Telephony"
+                                title="Direct Phone Dialer (SIM Call)"
                                 className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all flex items-center justify-center"
                               >
                                 <PhoneCall className="w-3.5 h-3.5 text-emerald-400" />
                               </a>
+
 
                               {/* Send WhatsApp Audio Script */}
                               <a
@@ -795,6 +923,35 @@ export function VoiceCallingAgent({
                       </a>
                     )}
                   </div>
+
+                  {/* Outbound Carrier Call Action */}
+                  {activeCall && (
+                    <div className="pt-2 z-10">
+                      <Button
+                        type="button"
+                        disabled={isDispatchingTelephony}
+                        onClick={() =>
+                          handleDispatchTelephony({
+                            phone: activeCall.phone,
+                            borrowerName: activeCall.borrowerName,
+                            pendingAmount: activeCall.pendingAmount,
+                            loanCode: activeCall.loanCode,
+                            dueDate: activeCall.dueDate,
+                            scheduledCallId: activeCall.callId,
+                          })
+                        }
+                        size="sm"
+                        className="bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs h-9 px-4 gap-2 rounded-xl shadow-lg shadow-purple-600/20"
+                      >
+                        {isDispatchingTelephony ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Radio className="w-3.5 h-3.5" />
+                        )}
+                        <span>📡 Trigger Outbound Carrier Call (Bolna AI Agent)</span>
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Spoken Dialog Transcript */}

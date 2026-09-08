@@ -16,6 +16,8 @@ import {
   Send,
   Loader2,
   Radio,
+  PhoneCall,
+  Sparkles,
 } from "lucide-react";
 
 interface SettingsFormProps {
@@ -47,6 +49,11 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     WHATSAPP_BUSINESS_ACCOUNT_ID: initialSettings["WHATSAPP_BUSINESS_ACCOUNT_ID"] || "",
     WHATSAPP_ACCESS_TOKEN: initialSettings["WHATSAPP_ACCESS_TOKEN"] || "",
     WHATSAPP_VERIFY_TOKEN: initialSettings["WHATSAPP_VERIFY_TOKEN"] || "rk_lending_webhook_secret_2026",
+    // AI Calling & Telephony Gateway Settings
+    AI_CALLING_API_KEY: initialSettings["AI_CALLING_API_KEY"] || "key_2745db6951ea880dad82e44843ce",
+    AI_CALLING_PROVIDER: initialSettings["AI_CALLING_PROVIDER"] || "BOLNA_AI",
+    AI_CALLING_AGENT_ID: initialSettings["AI_CALLING_AGENT_ID"] || "marathi_lending_agent",
+    AI_CALLING_DEFAULT_LANG: initialSettings["AI_CALLING_DEFAULT_LANG"] || "mr-IN",
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -57,6 +64,12 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   const [testPhone, setTestPhone] = useState("");
   const [isTestingSMS, setIsTestingSMS] = useState(false);
   const [testSMSResult, setTestSMSResult] = useState<{ success?: boolean; message?: string } | null>(null);
+
+  // Test Voice Call State
+  const [testVoicePhone, setTestVoicePhone] = useState("");
+  const [isTestingVoice, setIsTestingVoice] = useState(false);
+  const [testVoiceResult, setTestVoiceResult] = useState<{ success?: boolean; message?: string } | null>(null);
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -133,6 +146,53 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       });
     } finally {
       setIsTestingSMS(false);
+    }
+  };
+
+  const handleTestVoiceCall = async () => {
+    if (!testVoicePhone) {
+      alert("Please enter a 10-digit mobile number for test voice call.");
+      return;
+    }
+
+    setIsTestingVoice(true);
+    setTestVoiceResult(null);
+
+    try {
+      const res = await fetch("/api/voice-calls/dispatch-call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: testVoicePhone,
+          borrowerName: "सन्माननीय ग्राहक (Test Call)",
+          pendingAmount: 2500,
+          loanCode: "TEST-LN-01",
+          tone: "POLITE",
+          language: formData.AI_CALLING_DEFAULT_LANG || "mr-IN",
+          isTest: true,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setTestVoiceResult({
+          success: true,
+          message: data.message || "Outbound Marathi Voice Call initiated successfully!",
+        });
+      } else {
+        setTestVoiceResult({
+          success: false,
+          message: data.error || "Voice call dispatch failed.",
+        });
+      }
+    } catch {
+      setTestVoiceResult({
+        success: false,
+        message: "Network error triggering test voice call.",
+      });
+    } finally {
+      setIsTestingVoice(false);
     }
   };
 
@@ -558,6 +618,146 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
               onChange={handleChange}
               className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 font-mono text-white font-medium placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Section 5: AI Voice Calling & Telephony Gateway */}
+      <Card className="bg-slate-900 border-slate-800 shadow-xl overflow-hidden">
+        <CardHeader className="py-3.5 px-4 sm:px-5 bg-slate-950/70 border-b border-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <PhoneCall className="h-4 w-4 text-blue-400" />
+              <CardTitle className="text-xs font-bold uppercase tracking-wider text-white">
+                AI Voice Calling Telephony Gateway (एआय व्हॉईस कॉलिंग गेटवे)
+              </CardTitle>
+            </div>
+            <span className="font-mono text-[10px] px-2.5 py-0.5 rounded-full bg-blue-950/90 text-blue-400 border border-blue-800 self-start sm:self-auto font-medium">
+              Bolna AI / Telephony Engine
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-5 space-y-4 text-xs">
+          <p className="text-slate-300">
+            Configure your AI Calling Agent API Key to power automated Marathi voice calls for loan dues and payment reminders directly to borrowers' mobile phones.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-slate-200 font-semibold mb-1.5">
+                Calling Agent API Key (कॉलिंग एजंट एपीआय की)
+              </label>
+              <input
+                type="password"
+                name="AI_CALLING_API_KEY"
+                placeholder="Enter Calling Agent API Key"
+                value={formData.AI_CALLING_API_KEY}
+                onChange={handleChange}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 font-mono text-white font-medium placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+              />
+              <p className="text-[10px] text-slate-400 mt-1 font-mono">
+                Active Key: {formData.AI_CALLING_API_KEY ? `${formData.AI_CALLING_API_KEY.substring(0, 8)}...` : "Not Configured"}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-slate-200 font-semibold mb-1.5">
+                Telephony Provider Platform
+              </label>
+              <select
+                name="AI_CALLING_PROVIDER"
+                value={formData.AI_CALLING_PROVIDER}
+                onChange={handleChange}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 font-medium text-white focus:border-blue-500 focus:outline-none text-xs"
+              >
+                <option value="BOLNA_AI">Bolna AI Calling Agent (api.bolna.dev)</option>
+                <option value="BLAND_AI">Bland AI Telephony (api.bland.ai)</option>
+                <option value="VAPI_AI">Vapi AI Voice Gateway</option>
+                <option value="CUSTOM_WEBHOOK">Custom Telephony Webhook</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-slate-200 font-semibold mb-1.5">
+                Default Voice Agent Language & Accent
+              </label>
+              <select
+                name="AI_CALLING_DEFAULT_LANG"
+                value={formData.AI_CALLING_DEFAULT_LANG}
+                onChange={handleChange}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 font-medium text-white focus:border-blue-500 focus:outline-none text-xs"
+              >
+                <option value="mr-IN">मराठी - Marathi (Indian Female Voice)</option>
+                <option value="hi-IN">हिंदी - Hindi (Indian Accent)</option>
+                <option value="en-IN">English (Indian Accent)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-slate-200 font-semibold mb-1.5">
+                Agent / Workflow Identifier
+              </label>
+              <input
+                type="text"
+                name="AI_CALLING_AGENT_ID"
+                placeholder="e.g. marathi_lending_agent"
+                value={formData.AI_CALLING_AGENT_ID}
+                onChange={handleChange}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 font-mono text-white font-medium placeholder:text-slate-500 focus:border-blue-500 focus:outline-none text-xs"
+              />
+            </div>
+          </div>
+
+          {/* Test Outbound Voice Call Dispatcher */}
+          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-white text-xs flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-blue-400" />
+                Test Live Outbound Marathi Voice Call
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">Carrier Call Dispatch</span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <input
+                type="text"
+                placeholder="Enter 10-digit phone number for test call..."
+                value={testVoicePhone}
+                onChange={(e) => setTestVoicePhone(e.target.value)}
+                className="flex-1 rounded-xl border border-slate-700 bg-slate-900 p-2.5 text-xs font-mono text-white placeholder:text-slate-500 focus:border-blue-500 focus:outline-none"
+              />
+              <Button
+                type="button"
+                onClick={handleTestVoiceCall}
+                disabled={isTestingVoice}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs h-10 px-4 gap-1.5 shrink-0 shadow-md"
+              >
+                {isTestingVoice ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <PhoneCall className="h-3.5 w-3.5" />
+                )}
+                <span>Dispatch Test Call</span>
+              </Button>
+            </div>
+
+            {testVoiceResult && (
+              <div
+                className={`p-3 rounded-xl text-xs flex items-center gap-2 font-medium ${
+                  testVoiceResult.success
+                    ? "bg-emerald-950/80 border border-emerald-800 text-emerald-300"
+                    : "bg-rose-950/80 border border-rose-800 text-rose-300"
+                }`}
+              >
+                {testVoiceResult.success ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
+                )}
+                <span>{testVoiceResult.message}</span>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
