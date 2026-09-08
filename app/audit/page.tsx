@@ -3,10 +3,9 @@ import prisma from "@/lib/db";
 import { getSessionUser } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
-import { Badge } from "@/components/ui/Badge";
-import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 import { formatDate } from "@/lib/utils";
-import { ShieldCheck, User, Clock, Globe } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 
 interface AuditPageProps {
   searchParams: {
@@ -53,24 +52,24 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-slate-900">
-                Immutable Financial Audit Trail
+              <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
+                Immutable Financial Audit Trail (लेखापरीक्षण नोंदवही)
               </h1>
-              <span className="rounded-full bg-blue-100 text-blue-800 border border-blue-200 px-2.5 py-0.5 text-xs font-semibold">
+              <span className="rounded-full bg-blue-950/80 text-blue-400 border border-blue-800 px-2.5 py-0.5 text-xs font-semibold font-mono">
                 Tamper-Resistant Log
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-400 mt-1">
               Complete historical record of all financial mutations, disbursements, collections, reversals, and staff activities.
             </p>
           </div>
         </div>
 
         {/* Audit Log Table */}
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden bg-slate-900 border-slate-800 shadow-xl">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-600">
-              <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 uppercase tracking-wider text-[10px]">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
                 <tr>
                   <th className="px-4 py-3">Timestamp (IST)</th>
                   <th className="px-4 py-3">Actor / Staff</th>
@@ -80,14 +79,14 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
                   <th className="px-4 py-3">Client Context</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-800/80">
                 {auditLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-50/80">
-                    <td className="px-4 py-3 font-mono text-slate-900">
+                  <tr key={log.id} className="hover:bg-slate-800/50 transition-colors">
+                    <td className="px-4 py-3 font-mono text-slate-300">
                       {formatDate(log.createdAt, "dd MMM yyyy, hh:mm:ss a")}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="font-semibold text-slate-900">
+                      <div className="font-semibold text-white">
                         {log.user ? log.user.name : "System Engine"}
                       </div>
                       <div className="text-[10px] text-slate-400 font-mono">
@@ -95,25 +94,25 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono border ${
                         log.action === "REVERSE"
-                          ? "bg-red-100 text-red-800 border border-red-200"
+                          ? "bg-rose-950 text-rose-300 border-rose-800"
                           : log.action === "CREATE"
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                          : "bg-slate-100 text-slate-800"
+                          ? "bg-emerald-950 text-emerald-300 border-emerald-800"
+                          : "bg-slate-800 text-slate-200 border-slate-700"
                       }`}>
                         {log.action}
                       </span>
                     </td>
-                    <td className="px-4 py-3 font-semibold text-slate-800">
+                    <td className="px-4 py-3 font-semibold text-slate-200">
                       {log.entityType}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">
-                      <div className="font-mono text-[11px] text-slate-500 truncate max-w-xs" title={log.entityId}>
+                    <td className="px-4 py-3 text-slate-300">
+                      <div className="font-mono text-[11px] text-blue-400 truncate max-w-xs" title={log.entityId}>
                         ID: {log.entityId}
                       </div>
                       {log.newValues && (
-                        <div className="text-[10px] font-mono text-slate-600 truncate max-w-xs mt-0.5" title={log.newValues}>
+                        <div className="text-[10px] font-mono text-slate-400 truncate max-w-xs mt-0.5" title={log.newValues}>
                           {log.newValues}
                         </div>
                       )}
