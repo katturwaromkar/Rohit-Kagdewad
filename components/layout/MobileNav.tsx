@@ -26,11 +26,32 @@ import { cn } from "@/lib/utils";
 interface MobileNavProps {
   userRole?: string;
   userName?: string;
+  isOpen?: boolean;
+  onClose?: () => void;
+  onOpen?: () => void;
 }
 
-export function MobileNav({ userRole = "OWNER", userName = "Rohit Kagdewad" }: MobileNavProps) {
+export function MobileNav({
+  userRole = "OWNER",
+  userName = "Rohit Kagdewad",
+  isOpen,
+  onClose,
+  onOpen,
+}: MobileNavProps) {
   const pathname = usePathname();
-  const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  const drawerVisible = isOpen !== undefined ? (isOpen || internalOpen) : internalOpen;
+
+  const handleClose = () => {
+    setInternalOpen(false);
+    onClose?.();
+  };
+
+  const handleOpen = () => {
+    setInternalOpen(true);
+    onOpen?.();
+  };
 
   const mainTabs = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -56,13 +77,13 @@ export function MobileNav({ userRole = "OWNER", userName = "Rohit Kagdewad" }: M
   return (
     <>
       {/* Slide-over "More" Drawer for mobile */}
-      {isMoreOpen && (
+      {drawerVisible && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div
             className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm"
-            onClick={() => setIsMoreOpen(false)}
+            onClick={handleClose}
           />
-          <div className="fixed inset-y-0 right-0 max-w-xs w-full bg-slate-900 border-l border-slate-800 text-slate-200 p-5 shadow-2xl flex flex-col z-50">
+          <div className="fixed inset-y-0 right-0 max-w-xs w-full bg-slate-900 border-l border-slate-800 text-slate-200 p-5 shadow-2xl flex flex-col z-50 animate-in slide-in-from-right duration-200">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div className="flex items-center gap-2.5">
                 <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
@@ -74,7 +95,7 @@ export function MobileNav({ userRole = "OWNER", userName = "Rohit Kagdewad" }: M
                 </div>
               </div>
               <button
-                onClick={() => setIsMoreOpen(false)}
+                onClick={handleClose}
                 className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
                 aria-label="Close menu"
               >
@@ -94,7 +115,7 @@ export function MobileNav({ userRole = "OWNER", userName = "Rohit Kagdewad" }: M
                       <Link
                         key={item.name}
                         href={item.href}
-                        onClick={() => setIsMoreOpen(false)}
+                        onClick={handleClose}
                         className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
                       >
                         <Icon className="h-4 w-4 text-slate-400" />
@@ -117,7 +138,7 @@ export function MobileNav({ userRole = "OWNER", userName = "Rohit Kagdewad" }: M
                         <Link
                           key={item.name}
                           href={item.href}
-                          onClick={() => setIsMoreOpen(false)}
+                          onClick={handleClose}
                           className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
                         >
                           <Icon className="h-4 w-4 text-slate-400" />
@@ -169,7 +190,7 @@ export function MobileNav({ userRole = "OWNER", userName = "Rohit Kagdewad" }: M
         {/* More Tab */}
         <button
           type="button"
-          onClick={() => setIsMoreOpen(true)}
+          onClick={handleOpen}
           className="flex flex-col items-center justify-center flex-1 h-full py-1 text-[10px] font-medium text-slate-400 hover:text-slate-200"
         >
           <MoreHorizontal className="h-5 w-5 mb-0.5 text-slate-400" />

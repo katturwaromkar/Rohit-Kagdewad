@@ -48,20 +48,17 @@
     height: auto;
   }
 
-  /* Custom scrollbars */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  /* Hide scrollbars everywhere while preserving smooth scrolling functionality */
+  * {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
   }
-  ::-webkit-scrollbar-track {
-    background: #f1f5f9;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 3px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+
+  *::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+    width: 0px;
+    height: 0px;
+    background: transparent;
   }
 }
 

@@ -30,7 +30,7 @@ export function AppShell({ children, user }: AppShellProps) {
       {/* Main Content Column */}
       <div className="flex-1 lg:pl-64 flex flex-col min-h-screen max-w-full w-full overflow-x-hidden">
         <Header
-          onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          onToggleMobileMenu={() => setIsMobileMenuOpen(true)}
           userName={userName}
         />
 
@@ -45,7 +45,13 @@ export function AppShell({ children, user }: AppShellProps) {
         </div>
 
         {/* Mobile Navigation Drawer & Bottom Bar */}
-        <MobileNav userRole={userRole} userName={userName} />
+        <MobileNav
+          userRole={userRole}
+          userName={userName}
+          isOpen={isMobileMenuOpen}
+          onClose={() => setIsMobileMenuOpen(false)}
+          onOpen={() => setIsMobileMenuOpen(true)}
+        />
 
         {/* Mobile Push Notification Prompt */}
         <NotificationPrompt />
