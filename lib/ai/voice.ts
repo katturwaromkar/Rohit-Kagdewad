@@ -15,7 +15,8 @@ export type VoiceReminderType =
   | "PAYMENT_RECEIPT"
   | "RECEIPT"
   | "LOAN_WELCOME"
-  | "WELCOME";
+  | "WELCOME"
+  | "PHONE_CALL_REMINDER";
 
 export type VoiceTone = "POLITE" | "FORMAL" | "URGENT";
 
@@ -50,11 +51,12 @@ export interface VoiceScriptResult {
 /**
  * Normalizes reminder type to canonical enum
  */
-function normalizeReminderType(type: VoiceReminderType): "DUE_TODAY" | "DUE_IN_2_DAYS" | "OVERDUE_ALERT" | "PAYMENT_RECEIPT" | "LOAN_WELCOME" {
+function normalizeReminderType(type: VoiceReminderType): "DUE_TODAY" | "DUE_IN_2_DAYS" | "OVERDUE_ALERT" | "PAYMENT_RECEIPT" | "LOAN_WELCOME" | "PHONE_CALL_REMINDER" {
   if (type === "OVERDUE" || type === "OVERDUE_ALERT") return "OVERDUE_ALERT";
   if (type === "DUE_IN_2_DAYS" || type === "UPCOMING_2_DAYS") return "DUE_IN_2_DAYS";
   if (type === "PAYMENT_RECEIPT" || type === "RECEIPT") return "PAYMENT_RECEIPT";
   if (type === "LOAN_WELCOME" || type === "WELCOME") return "LOAN_WELCOME";
+  if (type === "PHONE_CALL_REMINDER") return "PHONE_CALL_REMINDER";
   return "DUE_TODAY";
 }
 
@@ -103,6 +105,10 @@ export function generateVoiceScript(
         script = `तात्काळ सूचना: नमस्कार ${params.borrowerName} जी. आपल्या कर्ज खात्याचा रुपये ${formattedInr} चा हप्ता थकला आहे. अतिरिक्त दंड आकारणी आणि कायदेशीर कारवाई टाळण्यासाठी, कृपया आजच ${phone} या क्रमांकावर संपर्क साधून हप्ता जमा करावा.`;
         break;
 
+      case "PHONE_CALL_REMINDER":
+        script = `नमस्कार ${params.borrowerName} जी! मी ${business} कार्यालयातून फोन केला आहे. आपल्या कर्ज खात्याचा एकूण देय हप्ता रुपये ${formattedInr} असून तारीख ${dateStr} पर्यंत भरणे बाकी आहे. अधिक माहिती व ऑनलाईन पेमेंटसाठी संपर्क करा: ${phone}. धन्यवाद!`;
+        break;
+
       case "PAYMENT_RECEIPT":
         script = `नमस्कार ${params.borrowerName} जी. आपल्याकडून रुपये ${formattedInr} ची हप्ता रक्कम यशस्वीरीत्या जमा झाली आहे. पावती क्रमांक ${params.receiptNumber || "REC-" + Date.now().toString().slice(-4)}. ${business} सोबत सहकार्य केल्याबद्दल मनःपूर्वक धन्यवाद!`;
         break;
@@ -146,6 +152,10 @@ export function generateVoiceScript(
 
       case "OVERDUE_ALERT":
         script = `Urgent Payment Notice for ${params.borrowerName}. Your loan installment of Rupees ${formattedInr} is currently overdue. To prevent late penalty charges and negative credit reporting, please clear the dues immediately or contact ${phone} today.`;
+        break;
+
+      case "PHONE_CALL_REMINDER":
+        script = `Hello ${params.borrowerName}. This is an automated call from ${businessEn}. Your loan pending balance of Rupees ${formattedInr} is due for payment on ${dateStr}. Please make payment or reach us at ${phone}. Thank you!`;
         break;
 
       case "PAYMENT_RECEIPT":

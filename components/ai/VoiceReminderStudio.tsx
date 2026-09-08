@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { generateVoiceScript, VoiceReminderType, VoiceTone } from "@/lib/ai/voice";
-import { generateWhatsAppLink, formatCurrency } from "@/lib/utils";
+import { generateWhatsAppLink, formatCurrency, formatDate } from "@/lib/utils";
 import {
   Mic,
   Play,
@@ -16,6 +16,9 @@ import {
   AlertCircle,
   Copy,
   Check,
+  PhoneCall,
+  Calendar,
+  Sparkles,
 } from "lucide-react";
 
 interface BorrowerOption {
@@ -26,6 +29,17 @@ interface BorrowerOption {
   activeLoanCode?: string;
   dueAmount?: number;
   dueDate?: string;
+}
+
+interface LiveDuesDetail {
+  totalOverdueAmount: number;
+  totalDueTodayAmount: number;
+  totalOutstanding: number;
+  effectivePendingAmount: number;
+  overdueCount: number;
+  primaryLoanCode: string;
+  earliestDueDate: string | null;
+  daysOverdue: number;
 }
 
 interface VoiceReminderStudioProps {
@@ -46,6 +60,8 @@ export function VoiceReminderStudio({
   const [language, setLanguage] = useState<"mr" | "en">("mr");
   const [tone, setTone] = useState<VoiceTone>("POLITE");
   const [customAmount, setCustomAmount] = useState<string>("");
+  const [liveDues, setLiveDues] = useState<LiveDuesDetail | null>(null);
+  const [isFetchingDues, setIsFetchingDues] = useState(false);
 
   // Audio Playback State
   const [isPlaying, setIsPlaying] = useState(false);
@@ -55,6 +71,44 @@ export function VoiceReminderStudio({
   const [copied, setCopied] = useState(false);
 
   const currentBorrower = borrowers.find((b) => b.id === selectedBorrowerId) || borrowers[0];
+
+  // Fetch accurate live dues whenever borrower changes
+  useEffect(() => {
+    if (!selectedBorrowerId) return;
+
+    let isMounted = true;
+    setIsFetchingDues(true);
+
+    fetch(`/api/voice-calls/borrower-dues?borrowerId=${selectedBorrowerId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (isMounted && data.success && data.summary) {
+          setLiveDues({
+            totalOverdueAmount: data.summary.totalOverdueAmount,
+            totalDueTodayAmount: data.summary.totalDueTodayAmount,
+            totalOutstanding: data.summary.totalOutstanding,
+            effectivePendingAmount: data.summary.effectivePendingAmount,
+            overdueCount: data.summary.overdueCount,
+            primaryLoanCode: data.summary.primaryLoanCode,
+            earliestDueDate: data.summary.earliestDueDate,
+            daysOverdue: data.summary.daysOverdue,
+          });
+
+          if (data.summary.totalOverdueAmount > 0) {
+            setReminderType("OVERDUE_ALERT");
+            setTone("URGENT");
+          }
+        }
+      })
+      .catch((err) => console.error("Error fetching borrower live dues", err))
+      .finally(() => {
+        if (isMounted) setIsFetchingDues(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedBorrowerId]);
 
   // Initialize SpeechSynthesis and find best Indian Female Voice
   useEffect(() => {
@@ -99,15 +153,19 @@ export function VoiceReminderStudio({
 
   const effectiveAmount = customAmount
     ? parseFloat(customAmount) || 0
-    : currentBorrower?.dueAmount || 5000;
+    : liveDues?.effectivePendingAmount ?? (currentBorrower?.dueAmount || 5000);
+
+  const effectiveDueDate = liveDues?.earliestDueDate || currentBorrower?.dueDate;
+  const effectiveLoanCode = liveDues?.primaryLoanCode || currentBorrower?.activeLoanCode;
 
   const scriptData = generateVoiceScript(reminderType, {
     borrowerName: currentBorrower?.fullName || "Borrower",
     amount: effectiveAmount,
-    dueDate: currentBorrower?.dueDate,
-    loanCode: currentBorrower?.activeLoanCode,
+    dueDate: effectiveDueDate,
+    loanCode: effectiveLoanCode,
     language,
     tone,
+    daysOverdue: liveDues?.daysOverdue,
   });
 
   const handlePlayVoice = () => {
@@ -166,13 +224,13 @@ export function VoiceReminderStudio({
           </div>
           <div>
             <CardTitle className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-              <span>Voice Reminders & Audio Dispatch</span>
+              <span>Voice Reminders & WhatsApp Audio Dispatch</span>
               <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-medium">
-                मराठी / English Audio
+                Live Marathi Audio
               </span>
             </CardTitle>
             <p className="text-xs text-slate-400 mt-0.5">
-              Automated spoken payment notices synthesized in natural Indian female tone.
+              Accurate live pending dues calculation & spoken notice generator in natural Indian female tone.
             </p>
           </div>
         </div>
@@ -248,6 +306,7 @@ export function VoiceReminderStudio({
               <option value="DUE_TODAY">Payment Due Today (आज देय हप्ता)</option>
               <option value="DUE_IN_2_DAYS">Due in 2 Days Notice (२ दिवसांत देय)</option>
               <option value="OVERDUE_ALERT">Overdue Urgent Alert (थकबाकी सूचना)</option>
+              <option value="PHONE_CALL_REMINDER">Phone Call Notice (कॉल सूचना)</option>
               <option value="PAYMENT_RECEIPT">Payment Receipt Confirmation (पावती)</option>
               <option value="LOAN_WELCOME">Loan Disbursal Welcome (कर्ज वाटप)</option>
             </select>
@@ -255,11 +314,11 @@ export function VoiceReminderStudio({
 
           <div>
             <label className="block text-slate-300 font-medium mb-1">
-              Amount (रक्कम ₹)
+              Amount (थकीत रक्कम ₹)
             </label>
             <input
               type="number"
-              value={customAmount || (currentBorrower?.dueAmount ? String(currentBorrower.dueAmount) : "")}
+              value={customAmount || (effectiveAmount ? String(effectiveAmount) : "")}
               onChange={(e) => {
                 handleStopVoice();
                 setCustomAmount(e.target.value);
@@ -269,6 +328,26 @@ export function VoiceReminderStudio({
             />
           </div>
         </div>
+
+        {/* Live Pending Dues Badge Breakdown */}
+        {liveDues && (
+          <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs">
+            <span className="text-slate-400 font-medium">Live Account Status:</span>
+            {liveDues.totalOverdueAmount > 0 && (
+              <span className="px-2.5 py-0.5 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/30 font-semibold font-mono">
+                Overdue: ₹{liveDues.totalOverdueAmount.toLocaleString("en-IN")} ({liveDues.overdueCount} installments)
+              </span>
+            )}
+            {liveDues.totalDueTodayAmount > 0 && (
+              <span className="px-2.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/30 font-semibold font-mono">
+                Due Today: ₹{liveDues.totalDueTodayAmount.toLocaleString("en-IN")}
+              </span>
+            )}
+            <span className="px-2.5 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/30 font-mono">
+              Total Outstanding: ₹{liveDues.totalOutstanding.toLocaleString("en-IN")}
+            </span>
+          </div>
+        )}
 
         {/* Live Audio Visualizer Player Box */}
         <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 sm:p-5 space-y-4">
@@ -407,7 +486,7 @@ export function VoiceReminderStudio({
                 className="w-full sm:w-auto h-9 px-5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs gap-1.5 shadow-lg shadow-emerald-600/20"
               >
                 <Send className="h-4 w-4" />
-                <span>Send via WhatsApp</span>
+                <span>Send WhatsApp Voice Message</span>
               </Button>
             </a>
           </div>
@@ -416,3 +495,4 @@ export function VoiceReminderStudio({
     </Card>
   );
 }
+

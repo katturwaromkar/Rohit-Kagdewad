@@ -126,13 +126,23 @@ export default async function OverduePage({ searchParams }: OverduePageProps) {
             </p>
           </div>
 
-          <div className="rounded-xl bg-red-950/80 border border-red-800/80 px-4 py-2 text-right shadow-lg">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-red-400 block">
-              Total Overdue Exposure (एकूण थकीत)
-            </span>
-            <span className="text-base font-bold text-red-300 font-mono">
-              {formatCurrency(totalOverdueExposure)}
-            </span>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/whatsapp"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all shadow-lg shadow-blue-600/20"
+            >
+              <Phone className="h-3.5 w-3.5" />
+              <span>AI Marathi Calling Desk</span>
+            </Link>
+
+            <div className="rounded-xl bg-red-950/80 border border-red-800/80 px-4 py-2 text-right shadow-lg">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-red-400 block">
+                Total Overdue Exposure (एकूण थकीत)
+              </span>
+              <span className="text-base font-bold text-red-300 font-mono">
+                {formatCurrency(totalOverdueExposure)}
+              </span>
+            </div>
           </div>
         </div>
 

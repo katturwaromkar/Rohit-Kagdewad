@@ -124,13 +124,23 @@ export default async function DuesPage({ searchParams }: DuesPageProps) {
             </p>
           </div>
 
-          <div className="rounded-xl bg-blue-950/80 border border-blue-800/80 px-4 py-2 text-right shadow-lg">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-blue-400 block">
-              Total Target in Current View (एकूण देय)
-            </span>
-            <span className="text-base font-bold text-blue-300 font-mono">
-              {formatCurrency(totalDueAmount)}
-            </span>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/whatsapp"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all shadow-lg shadow-blue-600/20"
+            >
+              <Phone className="h-3.5 w-3.5" />
+              <span>AI Marathi Calling Desk</span>
+            </Link>
+
+            <div className="rounded-xl bg-blue-950/80 border border-blue-800/80 px-4 py-2 text-right shadow-lg">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-blue-400 block">
+                Total Target (एकूण देय)
+              </span>
+              <span className="text-base font-bold text-blue-300 font-mono">
+                {formatCurrency(totalDueAmount)}
+              </span>
+            </div>
           </div>
         </div>
 

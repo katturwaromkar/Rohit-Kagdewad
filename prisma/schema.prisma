@@ -278,3 +278,25 @@ model BusinessSetting {
   description String?
   updatedAt   DateTime @updatedAt
 }
+
+// 12. AI Automated Voice Calling Schedule & Logs
+model ScheduledVoiceCall {
+  id              String    @id @default(uuid())
+  borrowerId      String
+  borrowerName    String
+  phone           String
+  loanCode        String?
+  scheduledDate   DateTime
+  scheduledTime   String    // e.g. "10:30 AM" or "14:00"
+  pendingAmount   Float
+  dueDate         DateTime?
+  language        String    @default("mr") // "mr" | "en"
+  tone            String    @default("POLITE") // "POLITE" | "URGENT"
+  status          String    @default("SCHEDULED") // "SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "MISSED" | "CANCELLED"
+  spokenScript    String
+  callNotes       String?
+  executedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+

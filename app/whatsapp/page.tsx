@@ -21,6 +21,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { VoiceReminderStudio } from "@/components/ai/VoiceReminderStudio";
+import { VoiceCallingAgent } from "@/components/ai/VoiceCallingAgent";
 import { WhatsAppDispatcher } from "./WhatsAppDispatcher";
 import { SMSDispatcher } from "@/components/sms/SMSDispatcher";
 
@@ -131,14 +132,14 @@ export default async function WhatsAppCenterPage({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-                Communications Hub (SMS, Voice & WhatsApp)
+                Communications Hub (SMS, AI Voice Calls & WhatsApp)
               </h1>
               <span className="rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30 px-2.5 py-0.5 text-xs font-semibold font-mono">
-                SMSLocal + Meta Cloud
+                Marathi AI + SMSLocal
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-1">
-              Automated borrower payment reminders, DLT SMS notices, spoken voice notes, and digital receipts.
+              Automated borrower payment reminders, Marathi AI voice calling, DLT SMS notices, spoken voice notes, and digital receipts.
             </p>
           </div>
         </div>
@@ -183,9 +184,9 @@ export default async function WhatsAppCenterPage({
           </Card>
         </div>
 
-        {/* SMSLocal.in SMS Dispatcher */}
+        {/* AI Automated Marathi Voice Calling Agent */}
         <div className="space-y-3">
-          <SMSDispatcher borrowers={borrowers} />
+          <VoiceCallingAgent preselectedBorrowerId={searchParams?.borrowerId} />
         </div>
 
         {/* Voice Reminders Studio */}
@@ -194,6 +195,11 @@ export default async function WhatsAppCenterPage({
             borrowers={borrowers}
             initialBorrowerId={searchParams?.borrowerId}
           />
+        </div>
+
+        {/* SMSLocal.in SMS Dispatcher */}
+        <div className="space-y-3">
+          <SMSDispatcher borrowers={borrowers} />
         </div>
 
         {/* Standard Dispatcher & Cron Simulation Component */}
