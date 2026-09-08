@@ -20,13 +20,19 @@ import {
   Phone,
   RefreshCw,
 } from "lucide-react";
+import { VoiceReminderStudio } from "@/components/ai/VoiceReminderStudio";
 import { WhatsAppDispatcher } from "./WhatsAppDispatcher";
+import { Mic, Sparkles } from "lucide-react";
 
-export default async function WhatsAppCenterPage() {
+export default async function WhatsAppCenterPage({
+  searchParams,
+}: {
+  searchParams?: { borrowerId?: string; tab?: string };
+}) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
 
-  const [messages, borrowers, totalSent, totalDelivered, totalFailed] = await Promise.all([
+  const [messages, rawBorrowers, totalSent, totalDelivered, totalFailed] = await Promise.all([
     prisma.whatsAppMessage.findMany({
       include: {
         borrower: true,
@@ -37,13 +43,39 @@ export default async function WhatsAppCenterPage() {
     }),
     prisma.borrower.findMany({
       where: { status: { in: ["ACTIVE", "OVERDUE"] } },
-      select: { id: true, fullName: true, phone: true, borrowerCode: true },
+      include: {
+        loans: {
+          where: { status: "ACTIVE" },
+          include: {
+            installments: {
+              where: { status: { in: ["PENDING", "OVERDUE"] } },
+              orderBy: { dueDate: "asc" },
+              take: 1,
+            },
+          },
+          take: 1,
+        },
+      },
       orderBy: { fullName: "asc" },
     }),
     prisma.whatsAppMessage.count({ where: { status: { in: ["SENT", "DELIVERED", "READ"] } } }),
     prisma.whatsAppMessage.count({ where: { status: { in: ["DELIVERED", "READ"] } } }),
     prisma.whatsAppMessage.count({ where: { status: "FAILED" } }),
   ]);
+
+  const borrowers = rawBorrowers.map((b) => {
+    const activeLoan = b.loans[0];
+    const nextInstallment = activeLoan?.installments[0];
+    return {
+      id: b.id,
+      fullName: b.fullName,
+      phone: b.phone,
+      borrowerCode: b.borrowerCode,
+      activeLoanCode: activeLoan?.loanCode,
+      dueAmount: nextInstallment ? Number(nextInstallment.totalDue) : 0,
+      dueDate: nextInstallment ? nextInstallment.dueDate.toISOString() : undefined,
+    };
+  });
 
   const templatesList = [
     {
@@ -151,8 +183,38 @@ export default async function WhatsAppCenterPage() {
           </Card>
         </div>
 
+        {/* AI Voice Reminders Studio (Indian Female Voice) */}
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span className="p-1 rounded-lg bg-pink-500/10 text-pink-500">
+                  <Mic className="h-4 w-4" />
+                </span>
+                <span>AI Voice Reminder Studio (भारतीय स्त्री आवाज)</span>
+                <span className="text-[10px] font-semibold bg-gradient-to-r from-pink-500 to-rose-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" /> New AI Feature
+                </span>
+              </h2>
+              <p className="text-xs text-slate-500">
+                Generate spoken voice reminders in natural Indian Female tone (मराठी / Indian English) with live speech preview and 1-tap WhatsApp dispatch.
+              </p>
+            </div>
+          </div>
+
+          <VoiceReminderStudio
+            borrowers={borrowers}
+            initialBorrowerId={searchParams?.borrowerId}
+          />
+        </div>
+
         {/* Interactive Dispatcher & Cron Simulation Client Component */}
-        <WhatsAppDispatcher borrowers={borrowers} />
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+            Standard WhatsApp Text Dispatcher & Scheduled Automation
+          </h2>
+          <WhatsAppDispatcher borrowers={borrowers} />
+        </div>
 
         {/* Standard Templates Preview Grid */}
         <div className="space-y-3">

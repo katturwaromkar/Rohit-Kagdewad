@@ -16,6 +16,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { differenceInDays } from "date-fns";
+import { VoiceQuickButton } from "@/components/ai/VoiceQuickButton";
 
 interface OverduePageProps {
   searchParams: {
@@ -298,10 +299,22 @@ export default async function OverduePage({ searchParams }: OverduePageProps) {
                               </Button>
                             </a>
 
+                            <VoiceQuickButton
+                              borrowerName={item.loan.borrower.fullName}
+                              phone={item.loan.borrower.phone}
+                              amount={item.unpaidAmount}
+                              dueDate={formatDate(item.dueDate)}
+                              overdueDays={item.daysOverdue}
+                              loanCode={item.loan.loanCode}
+                              type="OVERDUE"
+                              variant="icon"
+                              className="h-7 w-7"
+                            />
+
                             <a href={waLink} target="_blank" rel="noreferrer">
                               <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] text-emerald-400 border-emerald-800/80 bg-emerald-950/40 hover:bg-emerald-900/60 gap-1">
                                 <MessageSquare className="h-3 w-3" />
-                                <span>WhatsApp</span>
+                                <span>Text</span>
                               </Button>
                             </a>
 

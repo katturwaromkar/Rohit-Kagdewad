@@ -24,7 +24,10 @@ import {
   Calendar,
   AlertCircle,
   FileCheck,
+  Sparkles,
 } from "lucide-react";
+import { CreditScoreBadge } from "@/components/ai/CreditScoreBadge";
+import { VoiceQuickButton } from "@/components/ai/VoiceQuickButton";
 
 interface BorrowerProfileProps {
   params: {
@@ -90,6 +93,37 @@ export default async function BorrowerProfilePage({ params, searchParams }: Borr
     }
   }
 
+  // Calculate AI Credit Health & Overdue metrics
+  let overdueCount = 0;
+  let totalDueAcrossLoans = 0;
+  let firstOverdueInstallment: any = null;
+  let nextPendingInstallment: any = null;
+
+  for (const loan of borrower.loans) {
+    for (const inst of loan.installments) {
+      totalDueAcrossLoans += inst.totalDue;
+      if (inst.status === "OVERDUE") {
+        overdueCount += 1;
+        if (!firstOverdueInstallment) firstOverdueInstallment = { ...inst, loanCode: loan.loanCode };
+      } else if (inst.status === "PENDING" || inst.status === "DUE_TODAY" || inst.status === "UPCOMING") {
+        if (!nextPendingInstallment) nextPendingInstallment = { ...inst, loanCode: loan.loanCode };
+      }
+    }
+  }
+
+  const closedLoansCount = borrower.loans.filter((l) => l.status === "CLOSED").length;
+  const creditInput = {
+    totalLoans: borrower.loans.length,
+    activeLoans: activeLoans.length,
+    totalBorrowerPaid: totalRepaid,
+    totalBorrowerDue: totalDueAcrossLoans || totalBorrowed,
+    overdueInstallmentsCount: overdueCount,
+    closedLoansCount,
+    monthlyIncome: borrower.monthlyIncome ? Number(borrower.monthlyIncome) : null,
+  };
+
+  const targetInstallment = firstOverdueInstallment || nextPendingInstallment;
+
   const tabs = [
     { id: "overview", label: "Overview & KYC" },
     { id: "loans", label: `Loans (${borrower.loans.length})` },
@@ -115,13 +149,14 @@ export default async function BorrowerProfilePage({ params, searchParams }: Borr
               </Button>
             </Link>
             <div>
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 flex-wrap">
                 <h1 className="text-xl font-bold tracking-tight text-slate-900">
                   {borrower.fullName}
                 </h1>
                 <Badge status={borrower.status} />
+                <CreditScoreBadge input={creditInput} borrowerName={borrower.fullName} variant="badge" />
               </div>
-              <div className="flex items-center gap-3 text-xs text-slate-500 mt-1 font-mono">
+              <div className="flex items-center gap-3 text-xs text-slate-500 mt-1 font-mono flex-wrap">
                 <span>Code: {borrower.borrowerCode}</span>
                 <span>&bull;</span>
                 <span>+91 {borrower.phone}</span>
@@ -133,10 +168,20 @@ export default async function BorrowerProfilePage({ params, searchParams }: Borr
 
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2">
+            <VoiceQuickButton
+              borrowerName={borrower.fullName}
+              phone={borrower.phone}
+              amount={targetInstallment ? Math.max(0, targetInstallment.totalDue - targetInstallment.totalPaid) : totalOutstanding}
+              dueDate={targetInstallment ? formatDate(targetInstallment.dueDate) : undefined}
+              loanCode={targetInstallment?.loanCode || activeLoans[0]?.loanCode}
+              type={firstOverdueInstallment ? "OVERDUE" : "DUE_TODAY"}
+              variant="button"
+            />
+
             <a href={waLink} target="_blank" rel="noreferrer">
               <Button size="sm" variant="outline" className="text-emerald-700 border-emerald-300 hover:bg-emerald-50 gap-1.5">
                 <MessageSquare className="h-4 w-4 text-emerald-600" />
-                <span>WhatsApp</span>
+                <span>Text Msg</span>
               </Button>
             </a>
 
@@ -243,7 +288,16 @@ export default async function BorrowerProfilePage({ params, searchParams }: Borr
 
         {/* Tab 1: Overview & KYC */}
         {activeTab === "overview" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-6">
+            {/* AI Credit Risk & Health Analysis Card */}
+            <CreditScoreBadge
+              input={creditInput}
+              borrowerName={borrower.fullName}
+              variant="card"
+              className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader className="py-3 bg-slate-50/50">
                 <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-600">
@@ -333,6 +387,7 @@ export default async function BorrowerProfilePage({ params, searchParams }: Borr
                 )}
               </CardContent>
             </Card>
+            </div>
           </div>
         )}
 

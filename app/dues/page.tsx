@@ -16,6 +16,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { addDays, endOfWeek, startOfDay, endOfDay } from "date-fns";
+import { VoiceQuickButton } from "@/components/ai/VoiceQuickButton";
 
 interface DuesPageProps {
   searchParams: {
@@ -233,10 +234,10 @@ export default async function DuesPage({ searchParams }: DuesPageProps) {
                   </div>
 
                   {/* 1-Tap Action Buttons */}
-                  <div className="flex items-center gap-2 pt-2 border-t border-slate-800">
+                  <div className="grid grid-cols-4 gap-2 pt-2 border-t border-slate-800">
                     <a
                       href={`tel:${inst.loan.borrower.phone}`}
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 bg-slate-950 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800 transition-colors"
+                      className="flex items-center justify-center gap-1 rounded-xl border border-slate-700 bg-slate-950 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800 transition-colors"
                       title="Direct Call"
                     >
                       <Phone className="h-3.5 w-3.5 text-slate-400" />
@@ -247,16 +248,26 @@ export default async function DuesPage({ searchParams }: DuesPageProps) {
                       href={waLink}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-emerald-800/80 bg-emerald-950/40 py-2 text-xs font-medium text-emerald-400 hover:bg-emerald-900/60 transition-colors"
-                      title="Send WhatsApp Message"
+                      className="flex items-center justify-center gap-1 rounded-xl border border-emerald-800/80 bg-emerald-950/40 py-2 text-xs font-medium text-emerald-400 hover:bg-emerald-900/60 transition-colors"
+                      title="Send WhatsApp Text Message"
                     >
                       <MessageSquare className="h-3.5 w-3.5" />
-                      <span>WhatsApp</span>
+                      <span>Text</span>
                     </a>
+
+                    <VoiceQuickButton
+                      borrowerName={inst.loan.borrower.fullName}
+                      phone={inst.loan.borrower.phone}
+                      amount={unpaidAmount}
+                      dueDate={formatDate(inst.dueDate)}
+                      loanCode={inst.loan.loanCode}
+                      type={isOverdue ? "OVERDUE" : "DUE_TODAY"}
+                      variant="button"
+                      className="w-full justify-center text-[11px] py-2 px-1"
+                    />
 
                     <Link
                       href={`/payments?loanId=${inst.loan.id}&borrowerId=${inst.loan.borrower.id}&amount=${unpaidAmount}`}
-                      className="flex-1"
                     >
                       <Button size="sm" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs h-9 rounded-xl">
                         Collect

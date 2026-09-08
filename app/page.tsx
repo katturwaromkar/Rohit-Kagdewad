@@ -24,7 +24,10 @@ import {
   Plus,
   CheckCircle2,
   FileSpreadsheet,
+  Mic,
+  Sparkles,
 } from "lucide-react";
+import { VoiceQuickButton } from "@/components/ai/VoiceQuickButton";
 
 export default async function DashboardPage() {
   const user = await getSessionUser();
@@ -352,8 +355,19 @@ export default async function DashboardPage() {
                             </Button>
                           </a>
 
+                          <VoiceQuickButton
+                            borrowerName={inst.loan.borrower.fullName}
+                            phone={inst.loan.borrower.phone}
+                            amount={unpaidAmount}
+                            dueDate={formatDate(inst.dueDate)}
+                            loanCode={inst.loan.loanCode}
+                            type="DUE_TODAY"
+                            variant="icon"
+                            className="h-7 w-7"
+                          />
+
                           <a href={waLink} target="_blank" rel="noreferrer">
-                            <Button size="sm" variant="outline" className="h-7 w-7 p-0 text-emerald-400 border-emerald-800/80 bg-emerald-950/40 hover:bg-emerald-900/60" title="WhatsApp">
+                            <Button size="sm" variant="outline" className="h-7 w-7 p-0 text-emerald-400 border-emerald-800/80 bg-emerald-950/40 hover:bg-emerald-900/60" title="WhatsApp Text">
                               <MessageSquare className="h-3 w-3" />
                             </Button>
                           </a>
@@ -410,13 +424,25 @@ export default async function DashboardPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <div className="text-right font-mono font-bold text-xs text-red-400">
                           {formatCurrency(unpaidAmount)}
                         </div>
+
+                        <VoiceQuickButton
+                          borrowerName={inst.loan.borrower.fullName}
+                          phone={inst.loan.borrower.phone}
+                          amount={unpaidAmount}
+                          dueDate={formatDate(inst.dueDate)}
+                          loanCode={inst.loan.loanCode}
+                          type="OVERDUE"
+                          variant="icon"
+                          className="h-7 w-7"
+                        />
+
                         <a href={waLink} target="_blank" rel="noreferrer">
                           <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] text-emerald-400 border-emerald-800/80 bg-emerald-950/40 hover:bg-emerald-900/60">
-                            WhatsApp
+                            Text
                           </Button>
                         </a>
                       </div>
