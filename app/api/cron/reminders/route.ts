@@ -21,17 +21,29 @@ export async function GET(req: NextRequest) {
     }
 
     const today = new Date();
+    const todayStart = startOfDay(today);
     const todayEnd = endOfDay(today);
 
     let processedCount = 0;
     let sentCount = 0;
     let skippedCount = 0;
 
-    // 1. Process Due Today Installments
+    // 1. Mark past unpaid installments as OVERDUE
+    await prisma.installment.updateMany({
+      where: {
+        dueDate: { lt: todayStart },
+        status: { in: ["UPCOMING", "DUE_TODAY", "PARTIAL"] },
+      },
+      data: {
+        status: "OVERDUE",
+      },
+    });
+
+    // 2. Process Due Today Installments
     const dueTodayInsts = await prisma.installment.findMany({
       where: {
         status: { in: ["DUE_TODAY", "UPCOMING", "PARTIAL"] },
-        dueDate: { lte: todayEnd },
+        dueDate: { gte: todayStart, lte: todayEnd },
       },
       include: {
         loan: { include: { borrower: true } },
@@ -75,7 +87,7 @@ export async function GET(req: NextRequest) {
       sentCount++;
     }
 
-    // 2. Process Overdue Installments
+    // 3. Process Overdue Installments
     const overdueInsts = await prisma.installment.findMany({
       where: {
         status: "OVERDUE",

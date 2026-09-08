@@ -17,6 +17,7 @@ import {
   addMonths,
   subMonths,
   parseISO,
+  isValid,
 } from "date-fns";
 import {
   Calendar as CalendarIcon,
@@ -39,12 +40,19 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
   if (!user) redirect("/login");
 
   const today = new Date();
-  const currentMonthStr = searchParams.month || format(today, "yyyy-MM");
-  const selectedDateStr = searchParams.date || format(today, "yyyy-MM-dd");
+  const currentMonthStr =
+    searchParams.month && /^\d{4}-\d{2}$/.test(searchParams.month)
+      ? searchParams.month
+      : format(today, "yyyy-MM");
+  const selectedDateStr =
+    searchParams.date && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.date)
+      ? searchParams.date
+      : format(today, "yyyy-MM-dd");
 
   const [yearStr, monthStr] = currentMonthStr.split("-");
-  const currentMonthDate = new Date(parseInt(yearStr, 10), parseInt(monthStr, 10) - 1, 1);
-  const selectedDate = parseISO(selectedDateStr);
+  const currentMonthDate = new Date(parseInt(yearStr, 10) || today.getFullYear(), (parseInt(monthStr, 10) || today.getMonth() + 1) - 1, 1);
+  const parsedSelected = parseISO(selectedDateStr);
+  const selectedDate = isValid(parsedSelected) ? parsedSelected : today;
 
   const monthStart = startOfMonth(currentMonthDate);
   const monthEnd = endOfMonth(currentMonthDate);
