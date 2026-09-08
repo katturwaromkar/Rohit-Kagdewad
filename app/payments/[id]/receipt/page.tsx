@@ -6,7 +6,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { formatCurrency, formatDate, generateWhatsAppLink } from "@/lib/utils";
+import { formatCurrency, formatDate, generateWhatsAppLink, getAppBaseUrl } from "@/lib/utils";
 import { bilingualTemplates } from "@/lib/i18n/marathi";
 import {
   ArrowLeft,
@@ -23,7 +23,10 @@ interface ReceiptPageProps {
 
 export default async function ReceiptPage({ params }: ReceiptPageProps) {
   const user = await getSessionUser();
-  if (!user) redirect("/login");
+  if (!user) {
+    // If a borrower accesses this link without a staff session, redirect directly to the public download portal
+    redirect(`/receipts/${params.id}`);
+  }
 
   const payment = await prisma.payment.findUnique({
     where: { id: params.id },
@@ -51,7 +54,10 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
   const businessPhone = settingsMap["BUSINESS_PHONE"] || "+91 96652 69105";
   const businessAddress = settingsMap["BUSINESS_ADDRESS"] || "Station Road, Nanded, Maharashtra - 431601";
 
-  // Formatted Bilingual WhatsApp receipt text
+  const baseUrl = getAppBaseUrl();
+  const downloadUrl = `${baseUrl}/receipts/${payment.receiptNumber}`;
+
+  // Formatted Bilingual WhatsApp receipt text with direct download link
   const waReceiptText = bilingualTemplates.receipt({
     borrowerName: payment.borrower.fullName,
     amount: payment.amount.toLocaleString("en-IN"),
@@ -60,6 +66,7 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
     balanceRemaining: payment.loan.totalOutstanding.toLocaleString("en-IN"),
     businessName,
     businessPhone,
+    receiptDownloadUrl: downloadUrl,
   }, "both");
 
   const waLink = generateWhatsAppLink(payment.borrower.phone, waReceiptText);

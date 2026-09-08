@@ -48,6 +48,19 @@ export function cleanPhoneNumber(phone: string): string {
 }
 
 /**
+ * Get dynamic application base URL for public links (Receipts, Portals)
+ */
+export function getAppBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL.replace(/\/$/, "")}`;
+  }
+  return "https://rohit-kagdewad.vercel.app";
+}
+
+/**
  * Generate standard WhatsApp Web / mobile direct link
  */
 export function generateWhatsAppLink(phone: string, message: string): string {
@@ -56,3 +69,4 @@ export function generateWhatsAppLink(phone: string, message: string): string {
   const encodedMsg = encodeURIComponent(message);
   return `https://wa.me/${international}?text=${encodedMsg}`;
 }
+

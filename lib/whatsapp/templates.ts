@@ -1,4 +1,4 @@
-import { formatCurrency, formatDate } from "../utils";
+import { formatCurrency, formatDate, getAppBaseUrl } from "../utils";
 import { bilingualTemplates } from "../i18n/marathi";
 
 export interface TemplateParams {
@@ -7,6 +7,8 @@ export interface TemplateParams {
   amount?: number | string;
   dueDate?: string | Date;
   receiptNumber?: string;
+  paymentId?: string;
+  receiptDownloadUrl?: string;
   businessName?: string;
   businessPhone?: string;
   daysOverdue?: number;
@@ -73,6 +75,15 @@ export const WHATSAPP_TEMPLATES = {
   },
 
   PAYMENT_RECEIPT: (p: TemplateParams) => {
+    const baseUrl = getAppBaseUrl();
+    const downloadUrl =
+      p.receiptDownloadUrl ||
+      (p.paymentId
+        ? `${baseUrl}/receipts/${p.paymentId}`
+        : p.receiptNumber
+        ? `${baseUrl}/receipts/${p.receiptNumber}`
+        : undefined);
+
     return bilingualTemplates.receipt(
       {
         borrowerName: p.borrowerName,
@@ -82,6 +93,7 @@ export const WHATSAPP_TEMPLATES = {
         balanceRemaining: typeof p.balanceRemaining === "number" ? p.balanceRemaining.toLocaleString("en-IN") : String(p.balanceRemaining || "0.00"),
         businessName: p.businessName || "Rohit Kagdewad Lending Management",
         businessPhone: p.businessPhone || "+91 96652 69105",
+        receiptDownloadUrl: downloadUrl,
       },
       p.language || "both"
     );

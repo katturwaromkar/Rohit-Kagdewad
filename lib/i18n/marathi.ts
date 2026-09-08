@@ -50,6 +50,7 @@ export interface MessageTemplateData {
   penaltyAmount?: string;
   businessName?: string;
   businessPhone?: string;
+  receiptDownloadUrl?: string;
 }
 
 export const bilingualTemplates = {
@@ -60,21 +61,31 @@ export const bilingualTemplates = {
     const business = data.businessName || "Rohit Kagdewad Lending";
     const phone = data.businessPhone || "+91 96652 69105";
 
+    const downloadSectionMr = data.receiptDownloadUrl
+      ? `\n📥 *डिजिटल पावती डाऊनलोड करा (Download Receipt):*\n${data.receiptDownloadUrl}\n`
+      : "";
+
+    const downloadSectionEn = data.receiptDownloadUrl
+      ? `\n📥 *Download Official Digital Receipt:*\n${data.receiptDownloadUrl}\n`
+      : "";
+
     const mrText = `*पावती - रक्कम प्राप्त झाली* ✅\n\n` +
       `नमस्कार *${data.borrowerName}*,\n` +
       `तुमची *₹${data.amount}* रक्कम यशस्वीरित्या जमा झाली आहे.\n\n` +
       `📄 पावती क्र.: *${data.receiptNumber || "-"}*\n` +
       `🔖 कर्ज खाते: *${data.loanCode || "-"}*\n` +
-      `💰 उर्वरित बाकी: *₹${data.balanceRemaining || "0.00"}*\n\n` +
-      `धन्यवाद,\n*${business}*\n📞 संपर्क: ${phone}`;
+      `💰 उर्वरित बाकी: *₹${data.balanceRemaining || "0.00"}*\n` +
+      downloadSectionMr +
+      `\nधन्यवाद,\n*${business}*\n📞 संपर्क: ${phone}`;
 
     const enText = `*PAYMENT RECEIPT CONFIRMATION* ✅\n\n` +
       `Dear *${data.borrowerName}*,\n` +
       `We have received your payment of *₹${data.amount}*.\n\n` +
       `📄 Receipt No: *${data.receiptNumber || "-"}*\n` +
       `🔖 Loan ID: *${data.loanCode || "-"}*\n` +
-      `💰 Outstanding Balance: *₹${data.balanceRemaining || "0.00"}*\n\n` +
-      `Thank you,\n*${business}*\n📞 ${phone}`;
+      `💰 Outstanding Balance: *₹${data.balanceRemaining || "0.00"}*\n` +
+      downloadSectionEn +
+      `\nThank you,\n*${business}*\n📞 ${phone}`;
 
     if (lang === "mr") return mrText;
     if (lang === "en") return enText;

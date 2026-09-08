@@ -4,7 +4,7 @@
  * voice configurations, and WhatsApp voice note messaging payloads.
  */
 
-import { formatCurrency, formatDate } from "../utils";
+import { formatCurrency, formatDate, getAppBaseUrl } from "../utils";
 
 export type VoiceReminderType =
   | "DUE_TODAY"
@@ -27,6 +27,7 @@ export interface VoiceScriptParams {
   dueDate?: string | Date;
   loanCode?: string;
   receiptNumber?: string;
+  receiptDownloadUrl?: string;
   overdueDays?: number;
   daysOverdue?: number;
   businessName?: string;
@@ -89,6 +90,11 @@ export function generateVoiceScript(
   const formattedInr = numAmount.toLocaleString("en-IN");
   const dateStr = params.dueDate ? (typeof params.dueDate === "string" ? params.dueDate : formatDate(params.dueDate, "dd MMMM yyyy")) : "आज";
 
+  const baseUrl = getAppBaseUrl();
+  const receiptUrl =
+    params.receiptDownloadUrl ||
+    (params.receiptNumber ? `${baseUrl}/receipts/${params.receiptNumber}` : undefined);
+
   if (lang === "mr") {
     // मराठी (Marathi Spoken Scripts)
     let script = "";
@@ -121,10 +127,15 @@ export function generateVoiceScript(
         script = `नमस्कार ${params.borrowerName} जी. ${business} यांच्याकडून हे स्मरणपत्र. अधिक माहितीसाठी संपर्क करा: ${phone}.`;
     }
 
+    const receiptLinkSection = receiptUrl
+      ? `\n\n📥 *डिजिटल पावती डाऊनलोड करा (Download Receipt):*\n${receiptUrl}`
+      : "";
+
     const whatsappText = `🎙️ *AI Voice Reminder (व्हाईस मेसेज)*\n\n` +
       `नमस्कार *${params.borrowerName}*,\n\n` +
-      `📢 *संदेश:* ${script}\n\n` +
-      `🏢 *${business}*\n` +
+      `📢 *संदेश:* ${script}` +
+      receiptLinkSection +
+      `\n\n🏢 *${business}*\n` +
       `📞 संपर्क: ${phone}`;
 
     return {
@@ -170,10 +181,15 @@ export function generateVoiceScript(
         script = `Hello ${params.borrowerName}. This is a reminder from ${businessEn}. Please contact ${phone} for your loan details.`;
     }
 
+    const receiptLinkSection = receiptUrl
+      ? `\n\n📥 *Download Digital Receipt PDF:*\n${receiptUrl}`
+      : "";
+
     const whatsappText = `🎙️ *AI Voice Reminder (Voice Note)*\n\n` +
       `Hello *${params.borrowerName}*,\n\n` +
-      `📢 *Audio Transcript:* "${script}"\n\n` +
-      `🏢 *${businessEn}*\n` +
+      `📢 *Audio Transcript:* "${script}"` +
+      receiptLinkSection +
+      `\n\n🏢 *${businessEn}*\n` +
       `📞 Contact: ${phone}`;
 
     return {
@@ -189,3 +205,4 @@ export function generateVoiceScript(
     };
   }
 }
+
