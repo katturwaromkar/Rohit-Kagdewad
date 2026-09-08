@@ -4,7 +4,7 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
-const DEFAULT_DB_URL = "postgresql://postgres:Rohit%21%40%23123@db.vqmjtzviwnjommhbjuho.supabase.co:5432/postgres";
+const DEFAULT_DB_URL = "postgresql://postgres.vqmjtzviwnjommhbjuho:Rohit%21%40%23123@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true";
 
 function getDatabaseUrl(): string {
   let url = (process.env.DATABASE_URL || "").trim();
