@@ -19,7 +19,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 5,
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
   themeColor: "#0f172a",
 };
@@ -30,8 +31,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full bg-slate-950">
+    <html lang="en" className="h-full bg-slate-950 overflow-x-hidden">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -43,7 +45,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body className="h-full antialiased font-sans text-slate-100 bg-slate-950 selection:bg-blue-600 selection:text-white">
+      <body className="h-full antialiased font-sans text-slate-100 bg-slate-950 selection:bg-blue-600 selection:text-white overflow-x-hidden max-w-full">
         {children}
         <script
           dangerouslySetInnerHTML={{

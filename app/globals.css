@@ -30,11 +30,22 @@
     @apply border-slate-200;
   }
 
-  body {
-    @apply bg-slate-50 text-slate-900 antialiased font-sans;
+  html, body {
+    @apply bg-slate-950 text-slate-100 antialiased font-sans;
     min-height: 100vh;
+    max-width: 100vw;
+    width: 100%;
+    overflow-x: hidden;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    position: relative;
+  }
+
+  /* Prevent elements from pushing viewport width horizontally */
+  img, svg, video, canvas, audio, iframe, embed, object {
+    max-width: 100%;
+    height: auto;
   }
 
   /* Custom scrollbars */

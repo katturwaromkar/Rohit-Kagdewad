@@ -56,23 +56,23 @@ export function FinancialCharts({ monthlyData, portfolioStats }: FinancialCharts
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
       {/* Main Graph Card (8 cols) */}
-      <Card className="lg:col-span-8 bg-slate-900 border-slate-800">
-        <CardHeader className="py-3 px-4 sm:px-6 bg-slate-800/40 border-b border-slate-800 flex flex-row items-center justify-between">
+      <Card className="lg:col-span-8 bg-slate-900 border-slate-800 overflow-hidden">
+        <CardHeader className="py-3 px-3.5 sm:px-6 bg-slate-800/40 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-blue-400" />
+            <TrendingUp className="h-4 w-4 text-blue-400 shrink-0" />
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-white">
-              Financial Performance & Trends (आर्थिक विश्लेषण)
+              Financial Trends (आर्थिक विश्लेषण)
             </CardTitle>
           </div>
 
           {/* Toggle View */}
-          <div className="flex items-center rounded-lg bg-slate-950 p-1 border border-slate-800 text-[11px]">
+          <div className="flex items-center rounded-lg bg-slate-950 p-1 border border-slate-800 text-[11px] w-full sm:w-auto">
             <button
               type="button"
               onClick={() => setActiveTab("trend")}
-              className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+              className={`flex-1 sm:flex-none text-center px-2.5 py-1 rounded-md font-medium transition-colors ${
                 activeTab === "trend"
-                  ? "bg-blue-600 text-white"
+                  ? "bg-blue-600 text-white shadow-sm"
                   : "text-slate-400 hover:text-white"
               }`}
             >
@@ -81,9 +81,9 @@ export function FinancialCharts({ monthlyData, portfolioStats }: FinancialCharts
             <button
               type="button"
               onClick={() => setActiveTab("comparison")}
-              className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+              className={`flex-1 sm:flex-none text-center px-2.5 py-1 rounded-md font-medium transition-colors ${
                 activeTab === "comparison"
-                  ? "bg-blue-600 text-white"
+                  ? "bg-blue-600 text-white shadow-sm"
                   : "text-slate-400 hover:text-white"
               }`}
             >
@@ -92,24 +92,25 @@ export function FinancialCharts({ monthlyData, portfolioStats }: FinancialCharts
           </div>
         </CardHeader>
 
-        <CardContent className="p-4 sm:p-6">
+        <CardContent className="p-3.5 sm:p-6 overflow-hidden">
           {activeTab === "trend" ? (
-            <div className="space-y-3">
+            <div className="space-y-3 overflow-hidden">
               <div className="flex items-center justify-between text-xs text-slate-400">
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-blue-500 inline-block"></span>
-                  Monthly Repayment Revenue
+                <span className="flex items-center gap-1.5 truncate">
+                  <span className="h-2.5 w-2.5 rounded-full bg-blue-500 inline-block shrink-0"></span>
+                  Repayment Revenue
                 </span>
-                <span className="font-mono text-slate-300 font-semibold">
+                <span className="font-mono text-slate-300 font-semibold text-[11px] sm:text-xs shrink-0">
                   Peak: {formatCurrency(Math.max(...monthlyData.map(d => d.collected), 0))}
                 </span>
               </div>
 
               {/* Responsive SVG Area Chart */}
-              <div className="w-full overflow-hidden">
+              <div className="w-full max-w-full overflow-hidden">
                 <svg
                   viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-                  className="w-full h-44 sm:h-52 overflow-visible"
+                  className="w-full h-auto max-h-52 aspect-[600/200] overflow-hidden select-none"
+                  preserveAspectRatio="xMidYMid meet"
                 >
                   <defs>
                     <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
